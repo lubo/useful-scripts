@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rsync -r --delete-after --progress --size-only ~/Music/ \
+    /run/user/1000/gvfs/mtp:host=%5Busb%3A*%2C*%5D/Internal\ shared\ storage/Music/

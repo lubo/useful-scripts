@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rsync --rsync-path /storage/.kodi/addons/virtual.network-tools/bin/rsync \
+    -a --delete-after --no-o --no-g --progress ~/Music/ libreelec:music/
