@@ -1,4 +1,14 @@
 #!/bin/sh
 
+set -e
+
 rsync --rsync-path /storage/.kodi/addons/virtual.network-tools/bin/rsync \
     -a --delete-after --no-o --no-g --progress ~/Music/ libreelec:music/
+
+curl -H "Content-Type: application/json" -d '
+{
+    "id": '"${RANDOM}"',
+    "jsonrpc": "2.0",
+    "method": "AudioLibrary.Scan"
+}
+' "http://${KODI_HOST:-"localhost:8080"}/jsonrpc"
