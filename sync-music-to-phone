@@ -1,4 +1,9 @@
-#!/bin/sh
+#!/bin/sh -e
 
-rsync -r --delete-after --progress --size-only ~/Music/ \
-    /run/user/1000/gvfs/mtp:host=%5Busb%3A*%2C*%5D/Internal\ shared\ storage/Music/
+if [ "$#" -lt 1 ]; then
+	echo "Usage: $(basename "$0") HOST"
+
+	exit 1
+fi
+
+rsync -cre "ssh -p 2222" --delete-after --progress ~/Music/ "$1:Music/"
