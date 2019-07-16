@@ -1,9 +1,0 @@
-#!/bin/sh -e
-
-if [ "$#" -lt 1 ]; then
-	echo "Usage: $(basename "$0") HOST"
-
-	exit 1
-fi
-
-rsync -cre "ssh -p 2222" --delete-after --progress ~/Music/ "$1:Music/"
