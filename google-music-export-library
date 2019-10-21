@@ -1,0 +1,14 @@
+#!/bin/sh -e
+#
+# Exports list of tracks in Play Music library using
+# https://github.com/thebigmunch/google-music-scripts.
+
+gms search -y | \
+	# Log entries which represent library entries contain string in i/n form,
+	# where `i` is a track number and `n` is total number of track in the
+	# library.
+	grep -F / | \
+	# Split on / first, because there may be multiple spaces before `i`.
+	cut -d / -f 2- | \
+	# Split on space after `n`.
+	cut -d ' ' -f 2-
