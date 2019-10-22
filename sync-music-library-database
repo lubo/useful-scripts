@@ -1,0 +1,28 @@
+#!/bin/sh -e
+#
+# Syncs a database file in Git, exported using `google-music-export-library`,
+# with my music library.
+
+if [ -z "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
+	echo "MUSIC_LIBRARY_DATABASE_PATH environmental variable is not set" >&2
+	exit 1
+fi
+
+if [ ! -f "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
+	echo "${MUSIC_LIBRARY_DATABASE_PATH}: Not a file" >&2
+	exit 1
+fi
+
+cd "$(dirname "${MUSIC_LIBRARY_DATABASE_PATH}")"
+
+google-music-export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
+
+if git diff --quiet "${MUSIC_LIBRARY_DATABASE_PATH}"; then
+	echo "Library database is up-to-date."
+else
+	git add "${MUSIC_LIBRARY_DATABASE_PATH}"
+
+	git commit -m "Update database" > /dev/null
+
+	echo "Library database updated. Don't forget to push after reviewing the changes."
+fi
