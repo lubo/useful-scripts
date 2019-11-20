@@ -1,7 +1,9 @@
-#!/bin/sh -e
+#!/bin/bash -e
 #
 # Exports list of tracks in Play Music library using
 # https://github.com/thebigmunch/google-music-scripts.
+
+set -o pipefail
 
 gms search -y | \
 	# Log entries which represent library entries contain string in i/n form,
