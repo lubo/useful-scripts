@@ -13,4 +13,5 @@ gms search -y | \
 	# Split on / first, because there may be multiple spaces before `i`.
 	cut -d / -f 2- | \
 	# Split on space after `n`.
-	cut -d ' ' -f 2-
+	cut -d ' ' -f 2- | \
+	sort
