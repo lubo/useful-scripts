@@ -1,0 +1,123 @@
+#!/usr/bin/env python
+#
+# Provides commands to interact with YouTube Music using
+# https://github.com/sigma67/ytmusicapi.
+
+import argparse
+from getpass import getpass
+import json
+import sys
+
+from ytmusicapi import YTMusic
+
+GET_LIMIT = 1000
+
+HEADERS = {
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Content-Type": "application/json",
+    "Cookie": None,
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 "
+        "Firefox/72.0"
+    ),
+    "X-Goog-AuthUser": "0",
+    "x-origin": "https://music.youtube.com",
+}
+
+
+def format_song_entry(song):
+    return (
+        " -- ".join(
+            [
+                song["title"],
+                (song.get("artist") or song.get("artists"))[0]["name"],
+                (song.get("album") or {}).get("name") or "",
+            ],
+        )
+        + f' ({song["videoId"]})'
+    )
+
+
+def get_all_library_songs(client):
+    return [
+        *client.get_library_songs(GET_LIMIT),
+        *client.get_library_upload_songs(GET_LIMIT),
+    ]
+
+
+def songs_by_id(songs):
+    return {song["videoId"]: song for song in songs}
+
+
+def main():
+    arg_parser = argparse.ArgumentParser()
+    subparsers = arg_parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("export-library", help="Exports library to stdout")
+    sync_playlist_parser = subparsers.add_parser(
+        "sync-playlist",
+        help="Syncs a playlist with library",
+    )
+    sync_playlist_parser.add_argument(
+        "playlist_id",
+        help="ID of a playlist to be synced with library",
+    )
+
+    args = arg_parser.parse_args()
+
+    try:
+        cookie = getpass("Cookie: ") if sys.stdin.isatty() else input()
+        client = YTMusic(json.dumps({**HEADERS, "Cookie": cookie}))
+
+        if args.command == "export-library":
+            print(
+                "\n".join(
+                    sorted(
+                        [
+                            format_song_entry(song)
+                            for song in get_all_library_songs(client)
+                        ],
+                        key=str.lower,
+                    ),
+                ),
+            )
+        elif args.command == "sync-playlist":
+            library_songs = songs_by_id(get_all_library_songs(client))
+            playlist_songs = songs_by_id(
+                client.get_playlist(args.playlist_id, GET_LIMIT)["tracks"],
+            )
+
+            if library_songs.keys() == playlist_songs.keys():
+                print("The playlist is up-to-date.")
+            else:
+                if to_add := library_songs.keys() - playlist_songs.keys():
+                    for song_id in to_add:
+                        print(
+                            'Adding "{}"'.format(
+                                format_song_entry(library_songs[song_id]),
+                            )
+                        )
+
+                    client.add_playlist_items(args.playlist_id, to_add)
+
+                if to_remove := playlist_songs.keys() - library_songs.keys():
+                    for song_id in to_remove:
+                        print(
+                            'Removing "{}"'.format(
+                                format_song_entry(playlist_songs[song_id]),
+                            )
+                        )
+
+                    client.remove_playlist_items(
+                        args.playlist_id,
+                        [playlist_songs[song_id] for song_id in to_remove],
+                    )
+    except KeyError as error:
+        if error.args[0] in {"contents", "SAPISID"}:
+            print("Invalid credentials provided.", file=sys.stderr)
+        else:
+            raise
+
+
+if __name__ == "__main__":
+    main()
