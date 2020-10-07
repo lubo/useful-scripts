@@ -14,4 +14,4 @@ gms search -y | \
 	cut -d / -f 2- | \
 	# Split on space after `n`.
 	cut -d ' ' -f 2- | \
-	sort
+	LC_ALL=C sort -f
