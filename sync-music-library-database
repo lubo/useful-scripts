@@ -4,7 +4,13 @@
 # Music. It also syncs my main playlist on YouTube Music with my library.
 
 ytm_authenticated() {
-	pass "${YTM_COOKIE_PASS_PATH}" | ytm "$@"
+	if [ -n "${YTM_COOKIE_PASS_PATH}" ]; then
+		local cookie
+		cookie="$(pass "${YTM_COOKIE_PASS_PATH}")"
+		echo "${cookie}" | ytm "$@"
+	else
+		ytm "$@"
+	fi
 }
 
 commit_changes() {
