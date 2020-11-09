@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "4b7b55da9e074f1d95afc2429346c719b9bc3be5c16ee4f6d1bc278252a13243"
+            "sha256": "d40fc7523333377a2608c6ba14d932e961e7f8808bd37b5f7a1f521a57706fd9"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -336,13 +336,12 @@
             "version": "==1.12.1"
         },
         "ytmusicapi": {
-            "editable": true,
-            "git": "https://github.com/lubo/ytmusicapi.git",
             "hashes": [
-                "sha256:ede536ff754a7177802df52d14ad78cfc446ba7eab07e770dd0d59072371596b",
-                "sha256:fb1c4ebffa57f25eb8c638944195190675d1068033e1f64bb3ffaa2999c5a986"
+                "sha256:65de74ffa598a828990cd4072bc170170be6b281215712e5d6a0e9fd2760fafe",
+                "sha256:6cebaeb04ed898f3597e9125a519a87afecfd38b102991316df8449f8392db1c"
             ],
-            "ref": "74ccb7bed35a488318dd39bd90cd29e0612c75f8"
+            "index": "pypi",
+            "version": "==0.10.2"
         }
     },
     "develop": {}
