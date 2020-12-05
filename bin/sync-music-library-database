@@ -1,13 +1,13 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # Syncs a database file in Git with my music library on Play Music and YouTube
 # Music. It also syncs my main playlist on YouTube Music with my library.
 
-ytm_authenticated() {
+set -eo pipefail
+
+__ytm() {
 	if [ -n "${YTM_COOKIE_PASS_PATH}" ]; then
-		local cookie
-		cookie="$(pass "${YTM_COOKIE_PASS_PATH}")"
-		echo "${cookie}" | ytm "$@"
+		pass "${YTM_COOKIE_PASS_PATH}" | ytm "$@"
 	else
 		ytm "$@"
 	fi
@@ -39,9 +39,9 @@ main() {
 	cd "$(dirname "${MUSIC_LIBRARY_DATABASE_PATH}")"
 
 	git checkout -fq master
-	ytm_authenticated export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
+	__ytm export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
 	if [ -n "${MUSIC_LIBRARY_TARGET_PLAYLIST}" ]; then
-		ytm_authenticated sync-playlist "${MUSIC_LIBRARY_TARGET_PLAYLIST}"
+		__ytm sync-playlist "${MUSIC_LIBRARY_TARGET_PLAYLIST}"
 	fi
 	commit_changes "YouTube Music"
 }
