@@ -50,6 +50,54 @@ def songs_by_id(songs):
     return {song["videoId"]: song for song in songs}
 
 
+def export_library(client):
+    print(
+        "\n".join(
+            sorted(
+                [
+                    format_song_entry(song)
+                    for song in get_all_library_songs(client)
+                ],
+                key=str.lower,
+            ),
+        ),
+    )
+
+
+def sync_playlist(client, playlist_id):
+    library_songs = songs_by_id(get_all_library_songs(client))
+    playlist_songs = songs_by_id(
+        client.get_playlist(playlist_id, GET_LIMIT)["tracks"],
+    )
+
+    if library_songs.keys() == playlist_songs.keys():
+        print("The playlist is up-to-date.")
+        return
+
+    if to_add := library_songs.keys() - playlist_songs.keys():
+        for song_id in to_add:
+            print(
+                'Adding "{}"'.format(
+                    format_song_entry(library_songs[song_id]),
+                ),
+            )
+
+        client.add_playlist_items(playlist_id, to_add)
+
+    if to_remove := playlist_songs.keys() - library_songs.keys():
+        for song_id in to_remove:
+            print(
+                'Removing "{}"'.format(
+                    format_song_entry(playlist_songs[song_id]),
+                ),
+            )
+
+        client.remove_playlist_items(
+            playlist_id,
+            [playlist_songs[song_id] for song_id in to_remove],
+        )
+
+
 def main():
     arg_parser = argparse.ArgumentParser()
     subparsers = arg_parser.add_subparsers(dest="command", required=True)
@@ -65,53 +113,14 @@ def main():
 
     args = arg_parser.parse_args()
 
+    cookie = getpass("Cookie: ") if sys.stdin.isatty() else input()
     try:
-        cookie = getpass("Cookie: ") if sys.stdin.isatty() else input()
         client = YTMusic(json.dumps({**HEADERS, "Cookie": cookie}))
 
         if args.command == "export-library":
-            print(
-                "\n".join(
-                    sorted(
-                        [
-                            format_song_entry(song)
-                            for song in get_all_library_songs(client)
-                        ],
-                        key=str.lower,
-                    ),
-                ),
-            )
+            export_library(client)
         elif args.command == "sync-playlist":
-            library_songs = songs_by_id(get_all_library_songs(client))
-            playlist_songs = songs_by_id(
-                client.get_playlist(args.playlist_id, GET_LIMIT)["tracks"],
-            )
-
-            if library_songs.keys() == playlist_songs.keys():
-                print("The playlist is up-to-date.")
-            else:
-                if to_add := library_songs.keys() - playlist_songs.keys():
-                    for song_id in to_add:
-                        print(
-                            'Adding "{}"'.format(
-                                format_song_entry(library_songs[song_id]),
-                            )
-                        )
-
-                    client.add_playlist_items(args.playlist_id, to_add)
-
-                if to_remove := playlist_songs.keys() - library_songs.keys():
-                    for song_id in to_remove:
-                        print(
-                            'Removing "{}"'.format(
-                                format_song_entry(playlist_songs[song_id]),
-                            )
-                        )
-
-                    client.remove_playlist_items(
-                        args.playlist_id,
-                        [playlist_songs[song_id] for song_id in to_remove],
-                    )
+            sync_playlist(client, args.playlist_id)
     except KeyError as error:
         if error.args[0] in {"contents", "SAPISID"}:
             print("Invalid credentials provided.", file=sys.stderr)
