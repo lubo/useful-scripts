@@ -4,8 +4,10 @@
 # https://github.com/sigma67/ytmusicapi.
 
 import argparse
+import csv
 from getpass import getpass
 import json
+import operator
 import sys
 
 from ytmusicapi import YTMusic
@@ -26,16 +28,21 @@ HEADERS = {
 }
 
 
-def format_song_entry(song):
+def get_song_entry(song):
+    return {
+        "album": (song.get("album") or {}).get("name") or "",
+        "artist": (song.get("artist") or song.get("artists"))[0]["name"],
+        "id": song["videoId"],
+        "title": song["title"],
+    }
+
+
+def format_song_entry(song_entry):
     return (
         " -- ".join(
-            [
-                song["title"],
-                (song.get("artist") or song.get("artists"))[0]["name"],
-                (song.get("album") or {}).get("name") or "",
-            ],
+            operator.itemgetter("title", "artist", "album")(song_entry),
         )
-        + f' ({song["videoId"]})'
+        + f' ({song_entry["id"]})'
     )
 
 
@@ -51,15 +58,15 @@ def songs_by_id(songs):
 
 
 def export_library(client):
-    print(
-        "\n".join(
-            sorted(
-                [
-                    format_song_entry(song)
-                    for song in get_all_library_songs(client)
-                ],
-                key=str.lower,
+    writer = csv.writer(sys.stdout, lineterminator="\n")
+    writer.writerow(["Title", "Artist", "Album", "ID"])
+    writer.writerows(
+        sorted(
+            map(
+                operator.itemgetter("title", "artist", "album", "id"),
+                map(get_song_entry, get_all_library_songs(client)),
             ),
+            key=lambda item: tuple(map(str.lower, item)),
         ),
     )
 
@@ -78,7 +85,7 @@ def sync_playlist(client, playlist_id):
         for song_id in to_add:
             print(
                 'Adding "{}"'.format(
-                    format_song_entry(library_songs[song_id]),
+                    format_song_entry(get_song_entry(library_songs[song_id])),
                 ),
             )
 
@@ -88,7 +95,7 @@ def sync_playlist(client, playlist_id):
         for song_id in to_remove:
             print(
                 'Removing "{}"'.format(
-                    format_song_entry(playlist_songs[song_id]),
+                    format_song_entry(get_song_entry(playlist_songs[song_id])),
                 ),
             )
 
@@ -101,7 +108,10 @@ def sync_playlist(client, playlist_id):
 def main():
     arg_parser = argparse.ArgumentParser()
     subparsers = arg_parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("export-library", help="Exports library to stdout")
+    subparsers.add_parser(
+        "export-library",
+        help="Exports library to stdout in CSV",
+    )
     sync_playlist_parser = subparsers.add_parser(
         "sync-playlist",
         help="Syncs a playlist with library",
