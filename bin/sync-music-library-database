@@ -39,10 +39,6 @@ main() {
 	cd "$(dirname "${MUSIC_LIBRARY_DATABASE_PATH}")"
 
 	git checkout -fq master
-	google-music-export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
-	commit_changes "Play Music"
-
-	git checkout -fq ytm
 	ytm_authenticated export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
 	if [ -n "${MUSIC_LIBRARY_TARGET_PLAYLIST}" ]; then
 		ytm_authenticated sync-playlist "${MUSIC_LIBRARY_TARGET_PLAYLIST}"
