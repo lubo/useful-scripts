@@ -34,6 +34,7 @@ def get_song_entry(song):
         "artist": (song.get("artist") or song.get("artists"))[0]["name"],
         "id": song["videoId"],
         "title": song["title"],
+        "uploaded": "isAvailable" not in song,
     }
 
 
@@ -53,20 +54,30 @@ def get_all_library_songs(client):
     ]
 
 
+def library_sort_key(key):
+    return [attr.lower() if isinstance(attr, str) else attr for attr in key]
+
+
 def songs_by_id(songs):
     return {song["videoId"]: song for song in songs}
 
 
 def export_library(client):
     writer = csv.writer(sys.stdout, lineterminator="\n")
-    writer.writerow(["Title", "Artist", "Album", "ID"])
+    writer.writerow(["Title", "Artist", "Album", "ID", "Uploaded"])
     writer.writerows(
         sorted(
             map(
-                operator.itemgetter("title", "artist", "album", "id"),
+                operator.itemgetter(
+                    "title",
+                    "artist",
+                    "album",
+                    "id",
+                    "uploaded",
+                ),
                 map(get_song_entry, get_all_library_songs(client)),
             ),
-            key=lambda item: tuple(map(str.lower, item)),
+            key=library_sort_key,
         ),
     )
 
