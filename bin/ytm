@@ -47,10 +47,10 @@ def format_song_entry(song_entry):
     )
 
 
-def get_all_library_songs(client):
+def get_all_library_songs(client, order=None):
     return [
-        *client.get_library_songs(GET_LIMIT),
-        *client.get_library_upload_songs(GET_LIMIT),
+        *client.get_library_songs(GET_LIMIT, order),
+        *client.get_library_upload_songs(GET_LIMIT, order),
     ]
 
 
@@ -83,7 +83,9 @@ def export_library(client):
 
 
 def sync_playlist(client, playlist_id):
-    library_songs = songs_by_id(get_all_library_songs(client))
+    library_songs = songs_by_id(
+        reversed(get_all_library_songs(client, 'recently_added')),
+    )
     playlist_songs = songs_by_id(
         client.get_playlist(playlist_id, GET_LIMIT)["tracks"],
     )
@@ -92,7 +94,7 @@ def sync_playlist(client, playlist_id):
         print("The playlist is up-to-date.")
         return
 
-    if to_add := library_songs.keys() - playlist_songs.keys():
+    if to_add := [s for s in library_songs if s not in playlist_songs]:
         for song_id in to_add:
             print(
                 'Adding "{}"'.format(
