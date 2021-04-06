@@ -49,19 +49,19 @@
         },
         "urllib3": {
             "hashes": [
-                "sha256:1b465e494e3e0d8939b50680403e3aedaa2bc434b7d5af64dfd3c958d7f5ae80",
-                "sha256:de3eedaad74a2683334e282005cd8d7f22f4d55fa690a2a1020a416cb0a47e73"
+                "sha256:2f4da4594db7e1e110a944bb1b551fdf4e6c136ad42e4234131391e21eb5b0df",
+                "sha256:e7b021f7241115872f92f43c6508082facffbd1c048e3c6e2bb9c2a157e28937"
             ],
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
-            "version": "==1.26.3"
+            "version": "==1.26.4"
         },
         "ytmusicapi": {
             "hashes": [
-                "sha256:83251a95d5bd74116353d29dfda2d0c5055b88276a0876a313a66f8b9c691344",
-                "sha256:ff6c429fffa6f61d264bc5b696da9bb2261ac17836f1fd4ace3132e760f07053"
+                "sha256:3469db7041afac92bb7644a28a0d0022705a62320d32640bed256033e0278894",
+                "sha256:a5542aa0cbeeb8573fd50346e73fc0b291a580818f8bd6aa8d9dffdde54d862b"
             ],
             "index": "pypi",
-            "version": "==0.14.3"
+            "version": "==0.15.0"
         }
     },
     "develop": {}
