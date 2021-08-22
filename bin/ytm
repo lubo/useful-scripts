@@ -12,7 +12,7 @@ import operator
 import os
 import sys
 
-from youtube_dl import YoutubeDL
+from yt_dlp import YoutubeDL
 from ytmusicapi import YTMusic
 
 GET_LIMIT = 1000
@@ -66,8 +66,12 @@ def songs_by_id(songs):
 
 
 def download_library(client, cookie):
+    dest_dir = os.path.join(os.path.expanduser("~"), "Music")
     downloader = YoutubeDL({
-        "format": "140",
+        "format": "141",
+        "paths": {
+            "home": dest_dir,
+        },
         "postprocessors": [
             {
                 "key": "FFmpegMetadata",
@@ -101,14 +105,10 @@ def download_library(client, cookie):
         ))
 
     for song in map(get_song_entry, client.get_library_songs(GET_LIMIT)):
-        file_path = os.path.join(
-            os.path.expanduser("~"),
-            "Music",
-            f"{song['artist']} - {song['title']}.m4a".replace("/", "∕"),
-        )
-        if os.path.exists(file_path):
+        file_name = f"{song['artist']} - {song['title']}.m4a".replace("/", "∕")
+        if os.path.exists(os.path.join(dest_dir, file_name)):
             continue
-        downloader.params["outtmpl"] = file_path
+        downloader.outtmpl_dict["default"] = file_name
         downloader.download([
             "https://music.youtube.com/watch?v=" + song["id"],
         ])
