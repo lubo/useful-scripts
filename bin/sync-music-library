@@ -3,6 +3,7 @@
 # Syncs the following with my YouTube Music library:
 # - A local database file stored in a Git repository
 # - A YouTube Music playlist
+# - ~/Music directory (except for the uploaded songs)
 
 set -eo pipefail
 
@@ -52,6 +53,9 @@ main() {
 	else
 		echo "\$MUSIC_LIBRARY_TARGET_PLAYLIST: Variable unset" >&2
 	fi
+
+	echo "Downloading library…"
+	__ytm download-library
 }
 
 main "$@"
