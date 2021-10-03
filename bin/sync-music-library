@@ -15,10 +15,8 @@ __ytm() {
 }
 
 commit_changes() {
-	local service_name="$1"
-
 	if git diff --quiet "${MUSIC_LIBRARY_DATABASE_PATH}"; then
-		echo "${service_name}: Library database is up-to-date."
+		echo "Library database is up-to-date."
 		return
 	fi
 
@@ -26,9 +24,8 @@ commit_changes() {
 
 	git commit -m "Update database" > /dev/null
 
-	echo \
-		"${service_name}: Library database updated. Don't forget to push after" \
-		"reviewing the changes."
+	echo "Library database updated. Don't forget to push after reviewing" \
+		"the changes."
 }
 
 main() {
@@ -39,7 +36,7 @@ main() {
 
 		git checkout -fq master
 		__ytm export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
-		commit_changes "YouTube Music"
+		commit_changes
 
 		cd - > /dev/null
 	elif [ -n "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
