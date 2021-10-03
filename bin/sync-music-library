@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Syncs a database file in Git with my music library on Play Music and YouTube
-# Music. It also syncs my main playlist on YouTube Music with my library.
+# Syncs the following with my YouTube Music library:
+# - A local database file stored in a Git repository
+# - A YouTube Music playlist
 
 set -eo pipefail
 
@@ -31,19 +32,29 @@ commit_changes() {
 }
 
 main() {
-	if [ ! -f "${MUSIC_LIBRARY_DATABASE_PATH:?}" ]; then
+	if [ -f "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
+		echo "Exporting library…"
+
+		cd "$(dirname "${MUSIC_LIBRARY_DATABASE_PATH}")"
+
+		git checkout -fq master
+		__ytm export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
+		commit_changes "YouTube Music"
+
+		cd - > /dev/null
+	elif [ -n "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
 		echo "${MUSIC_LIBRARY_DATABASE_PATH}: Not a file" >&2
-		exit 1
+	else
+		echo "\$MUSIC_LIBRARY_DATABASE_PATH: Variable unset" >&2
 	fi
 
-	cd "$(dirname "${MUSIC_LIBRARY_DATABASE_PATH}")"
-
-	git checkout -fq master
-	__ytm export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
 	if [ -n "${MUSIC_LIBRARY_TARGET_PLAYLIST}" ]; then
+		echo "Syncing '${MUSIC_LIBRARY_TARGET_PLAYLIST}' with library…"
+
 		__ytm sync-playlist "${MUSIC_LIBRARY_TARGET_PLAYLIST}"
+	else
+		echo "\$MUSIC_LIBRARY_TARGET_PLAYLIST: Variable unset" >&2
 	fi
-	commit_changes "YouTube Music"
 }
 
 main "$@"
