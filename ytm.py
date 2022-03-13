@@ -192,7 +192,12 @@ def main():
 
     args = arg_parser.parse_args()
 
-    cookie = getpass("Cookie: ") if sys.stdin.isatty() else input()
+    try:
+        cookie = getpass("Cookie: ") if sys.stdin.isatty() else input()
+    except EOFError:
+        print("Cookie could not be read.", file=sys.stderr)
+        sys.exit(1)
+
     try:
         client = YTMusic(json.dumps({**HEADERS, "Cookie": cookie}))
 
