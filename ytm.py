@@ -108,7 +108,7 @@ def download_library(client, cookie):
         file_name = f"{song['artist']} - {song['title']}.m4a".replace("/", "∕")
         if os.path.exists(os.path.join(dest_dir, file_name)):
             continue
-        downloader.outtmpl_dict["default"] = file_name
+        downloader.params["outtmpl"]["default"] = file_name
         downloader.download([
             "https://music.youtube.com/watch?v=" + song["id"],
         ])
