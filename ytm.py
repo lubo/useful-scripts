@@ -15,7 +15,7 @@ import sys
 from yt_dlp import YoutubeDL
 from ytmusicapi import YTMusic
 
-GET_LIMIT = 1000
+GET_LIMIT = None
 
 HEADERS = {
     "Accept": "*/*",
