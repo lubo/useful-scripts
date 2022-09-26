@@ -52,7 +52,7 @@ def format_song_entry(song_entry):
 
 def get_all_library_songs(client, order=None):
     return [
-        *client.get_library_songs(GET_LIMIT, order),
+        *client.get_library_songs(GET_LIMIT, order=order),
         *client.get_library_upload_songs(GET_LIMIT, order),
     ]
 
