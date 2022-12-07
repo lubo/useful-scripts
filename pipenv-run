@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+PACKAGE_NAME="$(basename "$0")"
+
+cd "$(dirname "$0")/../${PACKAGE_NAME}"
+
+exec pipenv run python -m "${PACKAGE_NAME}" "$@"
