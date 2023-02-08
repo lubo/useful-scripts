@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# Wraps a program in ssh-agent adds keys into the agent. If no program is
+# provided, then it spawns an interactive shell.
+
+set -e
+
+main() {
+	if [[ ! "${SSH_AGENT_PID}" ]]; then
+		exec ssh-agent -- "$0" "$@"
+	fi
+
+	ssh-add || true
+
+	if [[ "$#" -gt 0 ]]; then
+		exec "$@"
+	fi
+
+	: "${SHELL:?}"
+
+	EXPECT_SCRIPT="$(cat <<-EOF
+	spawn -noecho "${SHELL}" -i
+	send "PS1=\"(ssh-agent) \\\${PS1}\"\n"
+	interact
+	EOF
+	)"
+
+	exec expect -c "${EXPECT_SCRIPT}"
+}
+
+main "$@"
