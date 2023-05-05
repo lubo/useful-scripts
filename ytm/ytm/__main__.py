@@ -67,51 +67,57 @@ def songs_by_id(songs):
 
 def download_library(client, cookie):
     dest_dir = os.path.join(os.path.expanduser("~"), "Music")
-    downloader = YoutubeDL({
-        "format": "141",
-        "paths": {
-            "home": dest_dir,
+    downloader = YoutubeDL(
+        {
+            "format": "141",
+            "paths": {
+                "home": dest_dir,
+            },
+            "postprocessors": [
+                {
+                    "key": "FFmpegMetadata",
+                },
+                {
+                    "key": "EmbedThumbnail",
+                },
+            ],
+            "writethumbnail": True,
         },
-        "postprocessors": [
-            {
-                "key": "FFmpegMetadata",
-            },
-            {
-                "key": "EmbedThumbnail",
-            },
-        ],
-        "writethumbnail": True,
-    })
+    )
 
     for cookie in map(str.strip, cookie.split(";")):
         name, value = cookie.split("=", 1)
-        downloader.cookiejar.set_cookie(Cookie(
-            version=0,
-            name=name,
-            value=value,
-            port=None,
-            port_specified=False,
-            domain="youtube.com",
-            domain_specified=True,
-            domain_initial_dot=True,
-            path="",
-            path_specified=False,
-            secure=True,
-            expires=None,
-            discard=False,
-            comment=None,
-            comment_url=None,
-            rest=None,
-        ))
+        downloader.cookiejar.set_cookie(
+            Cookie(
+                version=0,
+                name=name,
+                value=value,
+                port=None,
+                port_specified=False,
+                domain="youtube.com",
+                domain_specified=True,
+                domain_initial_dot=True,
+                path="",
+                path_specified=False,
+                secure=True,
+                expires=None,
+                discard=False,
+                comment=None,
+                comment_url=None,
+                rest=None,
+            ),
+        )
 
     for song in map(get_song_entry, client.get_library_songs(GET_LIMIT)):
         file_name = f"{song['artist']} - {song['title']}.m4a".replace("/", "∕")
         if os.path.exists(os.path.join(dest_dir, file_name)):
             continue
         downloader.params["outtmpl"]["default"] = file_name
-        downloader.download([
-            "https://music.youtube.com/watch?v=" + song["id"],
-        ])
+        downloader.download(
+            [
+                "https://music.youtube.com/watch?v=" + song["id"],
+            ],
+        )
 
 
 def export_library(client):
@@ -136,7 +142,7 @@ def export_library(client):
 
 def sync_playlist(client, playlist_id):
     library_songs = songs_by_id(
-        reversed(get_all_library_songs(client, 'recently_added')),
+        reversed(get_all_library_songs(client, "recently_added")),
     )
     playlist_songs = songs_by_id(
         client.get_playlist(playlist_id, GET_LIMIT)["tracks"],
@@ -201,7 +207,7 @@ def main():
     try:
         client = YTMusic(json.dumps({**HEADERS, "Cookie": cookie}))
 
-        if args.command == 'download-library':
+        if args.command == "download-library":
             download_library(client, cookie)
         elif args.command == "export-library":
             export_library(client)
