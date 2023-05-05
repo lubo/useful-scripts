@@ -7,28 +7,15 @@ import argparse
 import csv
 from getpass import getpass
 from http.cookiejar import Cookie
-import json
 import operator
 import os
 import sys
 
 from yt_dlp import YoutubeDL
+import ytmusicapi
 from ytmusicapi import YTMusic
 
 GET_LIMIT = None
-
-HEADERS = {
-    "Accept": "*/*",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Content-Type": "application/json",
-    "Cookie": None,
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 "
-        "Firefox/72.0"
-    ),
-    "X-Goog-AuthUser": "0",
-    "x-origin": "https://music.youtube.com",
-}
 
 
 def get_song_entry(song):
@@ -205,7 +192,18 @@ def main():
         sys.exit(1)
 
     try:
-        client = YTMusic(json.dumps({**HEADERS, "Cookie": cookie}))
+        client = YTMusic(
+            ytmusicapi.setup(
+                headers_raw=(
+                    # Authorization is only necessary to pass these checks:
+                    # https://github.com/sigma67/ytmusicapi/blob/4d5e4b7116d46a3523184c8fcb445669fceedd8a/ytmusicapi/auth/browser.py#L13
+                    # https://github.com/sigma67/ytmusicapi/blob/4d5e4b7116d46a3523184c8fcb445669fceedd8a/ytmusicapi/ytmusic.py#L106
+                    f"Authorization: SAPISIDHASH\n"
+                    f"Cookie: {cookie}\n"
+                    f"X-Goog-Authuser: 0\n"
+                ),
+            ),
+        )
 
         if args.command == "download-library":
             download_library(client, cookie)
