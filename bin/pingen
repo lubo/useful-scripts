@@ -1,0 +1,5 @@
+#!/bin/sh
+#
+# Generates PIN numbers using pwgen.
+
+exec pwgen -Ar abcdefghijklmnopqrstuvwxyz "$@"
