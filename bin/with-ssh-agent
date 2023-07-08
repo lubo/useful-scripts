@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Wraps a program in ssh-agent adds keys into the agent. If no program is
+# Wraps a program in ssh-agent and adds keys into the agent. If no program is
 # provided, then it spawns an interactive shell.
 
 set -e
