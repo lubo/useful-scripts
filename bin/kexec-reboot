@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+sudo kexec \
+	--load /boot/vmlinuz-linux \
+	--initrd /boot/initramfs-linux.img \
+	--reuse-cmdline
+
+systemctl kexec
