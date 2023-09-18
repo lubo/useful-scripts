@@ -5,14 +5,11 @@
 
 import argparse
 import csv
-from getpass import getpass
-from http.cookiejar import Cookie
 import operator
 import os
 import sys
 
 from yt_dlp import YoutubeDL
-import ytmusicapi
 from ytmusicapi import YTMusic
 
 GET_LIMIT = None
@@ -52,11 +49,14 @@ def songs_by_id(songs):
     return {song["videoId"]: song for song in songs}
 
 
-def download_library(client, cookie):
+def download_library(client):
     dest_dir = os.path.join(os.path.expanduser("~"), "Music")
     downloader = YoutubeDL(
         {
             "format": "141",
+            "http_headers": {
+                "Authorization": client.headers["Authorization"],
+            },
             "paths": {
                 "home": dest_dir,
             },
@@ -71,29 +71,6 @@ def download_library(client, cookie):
             "writethumbnail": True,
         },
     )
-
-    for cookie in map(str.strip, cookie.split(";")):
-        name, value = cookie.split("=", 1)
-        downloader.cookiejar.set_cookie(
-            Cookie(
-                version=0,
-                name=name,
-                value=value,
-                port=None,
-                port_specified=False,
-                domain="youtube.com",
-                domain_specified=True,
-                domain_initial_dot=True,
-                path="",
-                path_specified=False,
-                secure=True,
-                expires=None,
-                discard=False,
-                comment=None,
-                comment_url=None,
-                rest=None,
-            ),
-        )
 
     for song in map(get_song_entry, client.get_library_songs(GET_LIMIT)):
         file_name = f"{song['artist']} - {song['title']}.m4a".replace("/", "∕")
@@ -165,6 +142,11 @@ def sync_playlist(client, playlist_id):
 
 def main():
     arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument(
+        "credentials",
+        help="File containing OAuth credentials",
+        type=argparse.FileType(),
+    )
     subparsers = arg_parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser(
         "download-library",
@@ -185,38 +167,17 @@ def main():
 
     args = arg_parser.parse_args()
 
-    try:
-        cookie = getpass("Cookie: ") if sys.stdin.isatty() else input()
-    except EOFError:
-        print("Cookie could not be read.", file=sys.stderr)
-        sys.exit(1)
+    # Only regular files are supported, not symlinks like /dev/stdin, etc.
+    # https://github.com/sigma67/ytmusicapi/blob/56d54a2b50f242abe812cd8214b31ede98cb1d01/ytmusicapi/auth/headers.py#L14C9-L14C9
+    with args.credentials:
+        client = YTMusic(args.credentials.read())
 
-    try:
-        client = YTMusic(
-            ytmusicapi.setup(
-                headers_raw=(
-                    # Authorization is only necessary to pass these checks:
-                    # https://github.com/sigma67/ytmusicapi/blob/4d5e4b7116d46a3523184c8fcb445669fceedd8a/ytmusicapi/auth/browser.py#L13
-                    # https://github.com/sigma67/ytmusicapi/blob/4d5e4b7116d46a3523184c8fcb445669fceedd8a/ytmusicapi/ytmusic.py#L106
-                    f"Authorization: SAPISIDHASH\n"
-                    f"Cookie: {cookie}\n"
-                    f"X-Goog-Authuser: 0\n"
-                ),
-            ),
-        )
-
-        if args.command == "download-library":
-            download_library(client, cookie)
-        elif args.command == "export-library":
-            export_library(client)
-        elif args.command == "sync-playlist":
-            sync_playlist(client, args.playlist_id)
-    except KeyError as error:
-        if error.args[0] in {"contents", "SAPISID"}:
-            print("Invalid credentials provided.", file=sys.stderr)
-            sys.exit(1)
-        else:
-            raise
+    if args.command == "download-library":
+        download_library(client)
+    elif args.command == "export-library":
+        export_library(client)
+    elif args.command == "sync-playlist":
+        sync_playlist(client, args.playlist_id)
 
 
 if __name__ == "__main__":

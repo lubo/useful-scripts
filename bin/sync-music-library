@@ -8,11 +8,7 @@
 set -eo pipefail
 
 __ytm() {
-	if [ -n "${YTM_COOKIE_PASS_PATH}" ]; then
-		pass "${YTM_COOKIE_PASS_PATH}" | ytm "$@"
-	else
-		ytm "$@"
-	fi
+	ytm <(pass "${YTM_CREDENTIALS_PASS_PATH}") "$@"
 }
 
 commit_changes() {
@@ -30,6 +26,11 @@ commit_changes() {
 }
 
 main() {
+	if [ -z "${YTM_CREDENTIALS_PASS_PATH}" ]; then
+		echo "\$YTM_CREDENTIALS_PASS_PATH: Variable unset" >&2
+		exit 1
+	fi
+
 	if [ -f "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
 		echo "Exporting library…"
 
