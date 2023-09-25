@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "ytm"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = "^3.8"
+yt-dlp = ">=2022.06.22"  # https://github.com/ytdl-org/youtube-dl/issues/29494
+ytmusicapi = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
