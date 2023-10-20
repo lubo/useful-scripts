@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# Synchronizes bookmarks with the state of bookmarked links.
+
+set -eo pipefail
+
+__bookmarkmgr() {
+	pass "${RAINDROP_API_KEY_PASS_PATH}" | bookmarkmgr "$@"
+}
+
+commit_changes() {
+	if [[ ! "$(git status --porcelain "${BOOKMARK_DATABASE_PATH}")" ]]; then
+		echo "Bookmark database is up-to-date."
+		return
+	fi
+
+	git add "${BOOKMARK_DATABASE_PATH}"
+
+	git commit -m "Update database" > /dev/null
+
+	echo "Bookmark database updated. Don't forget to push after reviewing" \
+		"the changes."
+}
+
+run_maintenance() {
+	echo "Running maintenance…"
+
+	__bookmarkmgr maintain-collection "${BOOKMARK_RAINDROP_COLLECTION}"
+}
+
+export_bookmarks() {
+	echo "Exporting bookmarks…"
+
+	cd "$(dirname "${BOOKMARK_DATABASE_PATH}")"
+
+	git checkout -fq master
+	__bookmarkmgr export-collection "${BOOKMARK_RAINDROP_COLLECTION}" \
+		> "${BOOKMARK_DATABASE_PATH}"
+	commit_changes
+
+	cd - > /dev/null
+}
+
+main() {
+	: "${BOOKMARK_RAINDROP_COLLECTION:?}"
+	: "${BOOKMARK_DATABASE_PATH:?}"
+	: "${RAINDROP_API_KEY_PASS_PATH:?}"
+
+	run_maintenance
+
+	export_bookmarks
+}
+
+main "$@"
