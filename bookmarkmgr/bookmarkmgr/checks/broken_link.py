@@ -82,8 +82,8 @@ async def check_is_link_broken(session, url):
 
     if response.status_code == 200:
         title_parser = TitleHTMLParser()
-        # TODO: Switch to atext() on >=v0.5.10
-        title_parser.feed(response.text)
+        # TODO: Switch to acontent() on >=v0.5.10
+        title_parser.feed(response.content.decode(response.charset, "replace"))
 
         if (
             match := re.fullmatch(
