@@ -16,7 +16,7 @@ commit_changes() {
 
 	git add "${BOOKMARK_DATABASE_PATH}"
 
-	git commit -m "Update database" > /dev/null
+	with-ssh-agent git commit -m "Update database" > /dev/null
 
 	echo "Bookmark database updated. Don't forget to push after reviewing" \
 		"the changes."
