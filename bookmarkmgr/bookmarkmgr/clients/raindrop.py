@@ -8,6 +8,19 @@ from ..aiohttp import RateLimitedRetryClientSession
 RAINDROPS_PER_PAGE = 50
 
 
+async def _enqueue_items(queue, items):
+    for item in items:
+        await queue.put(item)
+
+
+async def _generator_from_worker_queue(queue, worker=None):
+    while (item := await queue.get()) is not None:
+        yield item
+
+    if worker is not None:
+        await worker
+
+
 class RaindropClient(ClientSessionContextManagerMixin):
     def __init__(self, api_key):
         self._session = RateLimitedRetryClientSession(
@@ -25,15 +38,22 @@ class RaindropClient(ClientSessionContextManagerMixin):
             return await response.text()
 
     async def get_collection_items(self, collection_id):
+        queue = asyncio.Queue()
+
         items, count = itemgetter("items", "count")(
             await self.get_collection_page(collection_id, 0),
         )
 
+        await _enqueue_items(queue, items)
+
         if count <= RAINDROPS_PER_PAGE:
-            return items, count
+            await queue.put(None)
+
+            return _generator_from_worker_queue(queue), count
 
         async def load_items(page_number):
-            items.extend(
+            await _enqueue_items(
+                queue,
                 (
                     await self.get_collection_page(
                         collection_id,
@@ -42,17 +62,23 @@ class RaindropClient(ClientSessionContextManagerMixin):
                 )["items"],
             )
 
-        async with asyncio.TaskGroup() as task_group:
-            for page_number in range(
-                1,
-                math.ceil(count / RAINDROPS_PER_PAGE),
-            ):
-                task_group.create_task(
-                    load_items(page_number),
-                    name=f"Gather-collection-page-{page_number}",
-                )
+        async def load_the_rest():
+            try:
+                async with asyncio.TaskGroup() as task_group:
+                    for page_number in range(
+                        1,
+                        math.ceil(count / RAINDROPS_PER_PAGE),
+                    ):
+                        task_group.create_task(
+                            load_items(page_number),
+                            name=f"Gather-collection-page-{page_number}",
+                        )
+            finally:
+                await queue.put(None)
 
-        return items, count
+        worker = asyncio.create_task(load_the_rest())
+
+        return _generator_from_worker_queue(queue, worker), count
 
     async def get_collection_page(self, collection_id, page):
         async with self._session.get(

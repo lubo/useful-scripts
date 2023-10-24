@@ -296,7 +296,7 @@ async def maintain_collection(
         ) as check_session,
         ForgivingTaskGroup() as task_group,
     ):
-        for item in items:
+        async for item in items:
             task = task_group.create_task(
                 maintain_raindrop(
                     raindrop_client,
