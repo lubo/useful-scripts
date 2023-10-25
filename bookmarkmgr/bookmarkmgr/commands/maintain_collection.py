@@ -269,17 +269,16 @@ async def maintain_collection(
     no_archive_broken,
     no_checks,
 ):
-    items, count = await raindrop_client.get_collection_items(collection_id)
+    items = await raindrop_client.get_collection_items(collection_id)
 
     progress_manager = enlighten.get_manager()
     progress_bar = progress_manager.counter(
         desc="Maintaining",
-        total=count,
         unit="links",
     )
 
     async def refresh_progress_bar():
-        while progress_bar.count < progress_bar.total:
+        while True:
             progress_bar.refresh()
             await asyncio.sleep(1)
 
@@ -296,7 +295,11 @@ async def maintain_collection(
         ) as check_session,
         ForgivingTaskGroup() as task_group,
     ):
+        count = 0
+
         async for item in items:
+            count += 1
+
             task = task_group.create_task(
                 maintain_raindrop(
                     raindrop_client,
@@ -312,4 +315,6 @@ async def maintain_collection(
             )
             task.add_done_callback(on_task_done)
 
-    await refresh_progress_bar_task
+        progress_bar.total = count
+
+    refresh_progress_bar_task.cancel()

@@ -49,7 +49,7 @@ class RaindropClient(ClientSessionContextManagerMixin):
         if count <= RAINDROPS_PER_PAGE:
             await queue.put(None)
 
-            return _generator_from_worker_queue(queue), count
+            return _generator_from_worker_queue(queue)
 
         async def load_items(page_number):
             await _enqueue_items(
@@ -78,7 +78,7 @@ class RaindropClient(ClientSessionContextManagerMixin):
 
         worker = asyncio.create_task(load_the_rest())
 
-        return _generator_from_worker_queue(queue, worker), count
+        return _generator_from_worker_queue(queue, worker)
 
     async def get_collection_page(self, collection_id, page):
         async with self._session.get(
