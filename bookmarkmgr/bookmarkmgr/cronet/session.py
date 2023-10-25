@@ -2,10 +2,17 @@ import asyncio
 from contextlib import nullcontext
 from urllib.parse import urlparse
 
-from curl_cffi.requests import AsyncSession, BrowserType, RequestsError
+from yarl import URL
 
-from .asyncio import RateLimiter, RateLimiterMixin
-from .logging import get_logger
+from ..asyncio import RateLimiter, RateLimiterMixin
+from ..logging import get_logger
+from ._cronet import lib
+from .default_headers import DEFAULT_HEADERS
+from .errors import _raise_for_error_result, Error, RequestError
+from .managers.executor import ExecutorManager
+from .managers.request_callback import RequestCallbackManager
+from .models import RequestParameters
+from .utils import adestroying, destroying
 
 logger = get_logger()
 
@@ -27,7 +34,46 @@ RETRYABLE_STATUS_CODES = {
 }
 
 
-class CurlSession(AsyncSession):
+class Session:
+    def __init__(self):
+        self._engine = None
+
+        self.open()
+
+    async def __aenter__(self):
+        self.open()
+
+        return self
+
+    async def __aexit__(self, *args, **kwargs):
+        self.close()
+
+    def _dispose_engine(self):
+        lib.Cronet_Engine_Destroy(self._engine)
+        self._engine = None
+
+    def open(self):
+        if self._engine is not None:
+            return
+
+        self._engine = lib.Cronet_Engine_Create()
+
+        try:
+            with destroying(
+                lib.Cronet_EngineParams_Create(),
+                lib.Cronet_EngineParams_Destroy,
+            ) as params:
+                _raise_for_error_result(
+                    lib.Cronet_Engine_StartWithParams(self._engine, params),
+                )
+        except Error:
+            self._dispose_engine()
+            raise
+
+    def close(self):
+        _raise_for_error_result(lib.Cronet_Engine_Shutdown(self._engine))
+        self._dispose_engine()
+
     async def delete(self, *args, **kwargs):
         return await self.request("DELETE", *args, **kwargs)
 
@@ -49,19 +95,83 @@ class CurlSession(AsyncSession):
     async def put(self, *args, **kwargs):
         return await self.request("PUT", *args, **kwargs)
 
+    async def request(self, method, url, params=None, **kwargs):
+        if params is not None:
+            url = str(URL(url).update_query(params))
 
-class RetryCurlSession(CurlSession):
+        executor_manager = ExecutorManager()
+
+        def on_request_finished():
+            executor_manager.shutdown()
+
+        async with (
+            adestroying(
+                lib.Cronet_UrlRequestParams_Create(),
+                lib.Cronet_UrlRequestParams_Destroy,
+            ) as parameters,
+            adestroying(
+                lib.Cronet_UrlRequest_Create(),
+                lib.Cronet_UrlRequest_Destroy,
+            ) as request,
+            RequestCallbackManager(
+                RequestParameters(
+                    method=method,
+                    url=url,
+                    **kwargs,
+                ),
+                on_request_finished,
+            ) as callback_manager,
+            executor_manager,
+        ):
+            lib.Cronet_UrlRequestParams_http_method_set(
+                parameters,
+                method.encode(),
+            )
+            for name, value in DEFAULT_HEADERS:
+                with destroying(
+                    lib.Cronet_HttpHeader_Create(),
+                    lib.Cronet_HttpHeader_Destroy,
+                ) as header:
+                    lib.Cronet_HttpHeader_name_set(header, name.encode())
+                    lib.Cronet_HttpHeader_value_set(header, value.encode())
+
+                    lib.Cronet_UrlRequestParams_request_headers_add(
+                        parameters,
+                        header,
+                    )
+
+            _raise_for_error_result(
+                lib.Cronet_UrlRequest_InitWithParams(
+                    request,
+                    self._engine,
+                    url.encode(),
+                    parameters,
+                    callback_manager.callback,
+                    executor_manager.executor,
+                ),
+            )
+
+            _raise_for_error_result(lib.Cronet_UrlRequest_Start(request))
+
+        if callback_manager.result_error is not None:
+            raise callback_manager.result_error
+
+        if callback_manager.request_error is not None:
+            raise callback_manager.request_error
+
+        return callback_manager.response
+
+
+class RetrySession(Session):
     def __init__(
         self,
         *args,
         rate_limit_timeout=60,
-        impersonate=BrowserType.chrome110,
         **kwargs,
     ):
         super().__init__(
             *args,
             **kwargs,
-            impersonate=impersonate,
         )
 
         self.rate_limit_timeout = rate_limit_timeout
@@ -121,7 +231,7 @@ class RetryCurlSession(CurlSession):
                         logger.error(error)
 
                     return response
-            except RequestsError as err:
+            except RequestError as err:
                 error = f"{err}: {method} {url}"
 
                 if attempt == max_attempts:
@@ -151,7 +261,7 @@ class RetryCurlSession(CurlSession):
             attempt += 1
 
 
-class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
+class RateLimitedSession(RateLimiterMixin, RetrySession):
     def __init__(
         self,
         *args,
@@ -162,7 +272,6 @@ class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
         super().__init__(
             *args,
             **kwargs,
-            max_clients=rate_limit,
             rate_limit=rate_limit,
             rate_limit_period=rate_limit_period,
             rate_limit_timeout=rate_limit_period,
@@ -173,7 +282,7 @@ class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
             return await super()._request(*args, **kwargs)
 
 
-class PerHostnameRateLimitedSession(RetryCurlSession):
+class PerHostnameRateLimitedSession(RetrySession):
     def __init__(
         self,
         *args,

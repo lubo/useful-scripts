@@ -3,7 +3,7 @@ from html.parser import HTMLParser
 import sys
 
 from . import ClientSessionContextManagerMixin
-from ..curl import RateLimitedRetryCurlSession
+from ..cronet import RateLimitedSession
 from ..logging import get_logger
 
 logger = get_logger("bookmarkmgr:AT")
@@ -24,7 +24,7 @@ class TextExtractionHTMLParser(HTMLParser):
 
 class ArchiveTodayClient(ClientSessionContextManagerMixin):
     def __init__(self):
-        self._session = RateLimitedRetryCurlSession(
+        self._session = RateLimitedSession(
             rate_limit=6,
         )
 
@@ -40,7 +40,6 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
         if response.status_code == 200:
             if "Refresh" not in response.headers:
                 html_parser = TextExtractionHTMLParser()
-                # TODO: Switch to atext() on >=v0.5.10
                 html_parser.feed(response.text)
 
                 return None, html_parser.get_text()

@@ -7,10 +7,18 @@ authors = []
 [tool.poetry.dependencies]
 aiohttp = "^3.8.5"
 aiohttp-retry = {git = "https://github.com/inyutin/aiohttp_retry.git"}
-curl-cffi = "^0.5.9"
+cffi = "^1.16.0"
 enlighten = "^1.12.0"
 python = "^3.11"
+yarl = "^1.9.2"
+
+# https://github.com/python-poetry/poetry/issues/2740
+[tool.poetry.build]
+script = "build.py"
 
 [build-system]
-requires = ["poetry-core"]
+requires = [
+    "cffi",
+    "poetry-core",
+]
 build-backend = "poetry.core.masonry.api"

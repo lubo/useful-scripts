@@ -1,0 +1,4 @@
+*.o
+*.so
+/bookmarkmgr/cronet/_cronet.c
+__pycache__

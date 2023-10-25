@@ -8,7 +8,7 @@ from ..asyncio import ForgivingTaskGroup
 from ..checks.broken_link import check_is_link_broken, LinkStatus
 from ..clients.archive_today import ArchiveTodayClient
 from ..clients.wayback_machine import WaybackMachineClient
-from ..curl import PerHostnameRateLimitedSession
+from ..cronet import PerHostnameRateLimitedSession
 from ..logging import get_logger
 
 logger = get_logger()
@@ -303,7 +303,6 @@ async def maintain_collection(
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
             host_rate_limits=host_rate_limits,
-            max_clients=100,
         ) as check_session,
         get_progress_bar() as progress_bar,
         ForgivingTaskGroup() as task_group,

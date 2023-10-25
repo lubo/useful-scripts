@@ -3,7 +3,7 @@ from html.parser import HTMLParser
 import re
 from urllib.parse import urlparse
 
-from curl_cffi.requests import RequestsError
+from ..cronet import RequestError
 
 
 PERMANENT_REDIRECT_STATUS_CODES = {
@@ -72,8 +72,7 @@ async def check_is_link_broken(session, url):
         else:
             html_parser.reset()
 
-        # TODO: Switch to acontent() on >=v0.5.10
-        html_parser.feed(response.content.decode(response.charset, "replace"))
+        html_parser.feed(response.text)
 
         return html_parser.body_text == "Loading..."  # Rate limit hit
 
@@ -87,7 +86,7 @@ async def check_is_link_broken(session, url):
             allow_redirects=False,
             retry_predicate=retry_predicate,
         )
-    except RequestsError as error:
+    except RequestError as error:
         link_status = LinkStatus.POSSIBLY_BROKEN
         error = str(error)
 

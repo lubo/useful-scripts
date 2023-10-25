@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -eo pipefail
+
+cd "$(dirname "$0")"
+
+echo "DEFAULT_HEADERS = $(./dump-headers.py)" \
+	| ruff format - \
+	> bookmarkmgr/cronet/default_headers.py \
+	&
+
+google-chrome-stable \
+	--incognito \
+	http://127.0.0.1:8080/ \
+	> /dev/null 2>&1
+
+wait
