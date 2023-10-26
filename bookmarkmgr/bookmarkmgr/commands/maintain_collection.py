@@ -295,7 +295,7 @@ async def maintain_collection(
     no_archive_broken,
     no_checks,
 ):
-    items = await raindrop_client.get_collection_items(collection_id)
+    items = raindrop_client.get_collection_items(collection_id)
 
     async with (
         ArchiveTodayClient() as at_client,
