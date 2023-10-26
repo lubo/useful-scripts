@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 import enlighten
@@ -11,6 +12,31 @@ from ..curl import RetryCurlSession
 from ..logging import get_logger
 
 logger = get_logger()
+
+
+@asynccontextmanager
+async def get_progress_bar():
+    progress_bar = enlighten.get_manager().counter(
+        desc="Maintaining",
+        unit="links",
+    )
+    stop_refreshing = False
+
+    async def refresh():
+        while True:
+            progress_bar.refresh()
+
+            if stop_refreshing:
+                break
+
+            await asyncio.sleep(1)
+
+    refresh_task = asyncio.create_task(refresh())
+
+    yield progress_bar
+
+    stop_refreshing = True
+    await refresh_task
 
 
 class DefaultsDict(dict):
@@ -271,36 +297,19 @@ async def maintain_collection(
 ):
     items = await raindrop_client.get_collection_items(collection_id)
 
-    progress_manager = enlighten.get_manager()
-    progress_bar = progress_manager.counter(
-        desc="Maintaining",
-        unit="links",
-    )
-
-    stop_refreshing_progress_bar = False
-
-    async def refresh_progress_bar():
-        while True:
-            progress_bar.refresh()
-
-            if stop_refreshing_progress_bar:
-                break
-
-            await asyncio.sleep(1)
-
-    refresh_progress_bar_task = asyncio.create_task(refresh_progress_bar())
-
-    def on_task_done(task):
-        progress_bar.update()
-
     async with (
         ArchiveTodayClient() as at_client,
         WaybackMachineClient() as wm_client,
         RetryCurlSession(
             max_clients=100,
         ) as check_session,
+        get_progress_bar() as progress_bar,
         ForgivingTaskGroup() as task_group,
     ):
+
+        def on_task_done(task):
+            progress_bar.update()
+
         count = 0
 
         async for item in items:
@@ -322,6 +331,3 @@ async def maintain_collection(
             task.add_done_callback(on_task_done)
 
         progress_bar.total = count
-
-    stop_refreshing_progress_bar = True
-    await refresh_progress_bar_task
