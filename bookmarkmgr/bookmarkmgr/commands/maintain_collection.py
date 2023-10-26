@@ -277,9 +277,15 @@ async def maintain_collection(
         unit="links",
     )
 
+    stop_refreshing_progress_bar = False
+
     async def refresh_progress_bar():
         while True:
             progress_bar.refresh()
+
+            if stop_refreshing_progress_bar:
+                break
+
             await asyncio.sleep(1)
 
     refresh_progress_bar_task = asyncio.create_task(refresh_progress_bar())
@@ -317,4 +323,5 @@ async def maintain_collection(
 
         progress_bar.total = count
 
-    refresh_progress_bar_task.cancel()
+    stop_refreshing_progress_bar = True
+    await refresh_progress_bar_task
