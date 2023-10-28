@@ -85,7 +85,10 @@ async def check_is_link_broken(session, url):
         # TODO: Switch to acontent() on >=v0.5.10
         title_parser.feed(response.content.decode(response.charset, "replace"))
 
-        if (
+        if not title_parser.title:  # May be rate limit response
+            link_status = LinkStatus.POSSIBLY_BROKEN
+            error = "Missing title"
+        elif (
             match := re.fullmatch(
                 r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
                 title_parser.title,
@@ -94,6 +97,7 @@ async def check_is_link_broken(session, url):
             link_status = LinkStatus.BROKEN
             error = match.group(1)
 
+        if error is not None:
             return link_status, error, fixed_url
 
     if response.ok and response.status_code not in REDIRECT_STATUS_CODES:
