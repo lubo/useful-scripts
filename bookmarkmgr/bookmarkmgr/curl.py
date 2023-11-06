@@ -1,5 +1,6 @@
 import asyncio
 
+from curl_cffi import Curl
 from curl_cffi.requests import AsyncSession, BrowserType, RequestsError
 
 from .asyncio import RateLimiterMixin
@@ -25,7 +26,17 @@ RETRYABLE_STATUS_CODES = {
 }
 
 
-class InheritableCurlSession(AsyncSession):
+class CurlSession(AsyncSession):
+    def init_pool(self, *args, **kwargs):
+        self.pool = asyncio.LifoQueue()
+
+    async def pop_curl(self, *args, **kwargs):
+        return (
+            Curl(debug=self.debug)
+            if self.pool.empty()
+            else self.pool.get_nowait()
+        )
+
     async def delete(self, *args, **kwargs):
         return await self.request("DELETE", *args, **kwargs)
 
@@ -48,7 +59,7 @@ class InheritableCurlSession(AsyncSession):
         return await self.request("PUT", *args, **kwargs)
 
 
-class RetryCurlSession(InheritableCurlSession):
+class RetryCurlSession(CurlSession):
     def __init__(
         self,
         *args,

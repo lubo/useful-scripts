@@ -300,9 +300,7 @@ async def maintain_collection(
     async with (
         ArchiveTodayClient() as at_client,
         WaybackMachineClient() as wm_client,
-        RetryCurlSession(
-            max_clients=100,
-        ) as check_session,
+        RetryCurlSession() as check_session,
         get_progress_bar() as progress_bar,
         ForgivingTaskGroup() as task_group,
     ):
