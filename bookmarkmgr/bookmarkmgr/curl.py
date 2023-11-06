@@ -7,6 +7,23 @@ from .logging import get_logger
 
 logger = get_logger()
 
+RATE_LIMIT_STATUS_CODES = {
+    408,
+    429,
+}
+
+TRANSIENT_ERROR_STATUS_CODES = {
+    500,
+    502,
+    503,
+    504,
+}
+
+RETRYABLE_STATUS_CODES = {
+    *RATE_LIMIT_STATUS_CODES,
+    *TRANSIENT_ERROR_STATUS_CODES,
+}
+
 
 class InheritableCurlSession(AsyncSession):
     async def delete(self, *args, **kwargs):
@@ -54,7 +71,6 @@ class RetryCurlSession(InheritableCurlSession):
         attempt = 1
         factor = 1
         max_attempts = 5
-        rate_limit_status_codes = {408, 429}
         start_delay = 2.5
 
         while True:
@@ -71,8 +87,7 @@ class RetryCurlSession(InheritableCurlSession):
                     )
 
                 if (
-                    response.ok
-                    or response.status_code not in rate_limit_status_codes
+                    response.status_code not in RETRYABLE_STATUS_CODES
                     or attempt == max_attempts
                 ):
                     if error is not None:
@@ -89,10 +104,13 @@ class RetryCurlSession(InheritableCurlSession):
 
             logger.debug(f"Attempt {attempt} failed: {error}")
 
-            if response is None:
+            if (
+                response is None
+                or response.status_code not in RATE_LIMIT_STATUS_CODES
+            ):
                 delay = start_delay * factor
                 factor *= 2
-            elif response.status_code in rate_limit_status_codes:
+            else:
                 delay = self.rate_limit_timeout
                 max_attempts += 1
 
