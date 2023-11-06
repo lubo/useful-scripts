@@ -67,7 +67,14 @@ class RetryCurlSession(InheritableCurlSession):
     async def _request(self, *args, **kwargs):
         return await super().request(*args, **kwargs)
 
-    async def request(self, method, url, *args, **kwargs):
+    async def request(
+        self,
+        method,
+        url,
+        *args,
+        retry_predicate=None,
+        **kwargs,
+    ):
         attempt = 1
         factor = 1
         max_attempts = 5
@@ -75,10 +82,14 @@ class RetryCurlSession(InheritableCurlSession):
 
         while True:
             response = None
+            retry = False
             error = None
 
             try:
                 response = await self._request(method, url, *args, **kwargs)
+
+                if retry_predicate is not None:
+                    retry = retry_predicate(response)
 
                 if not response.ok:
                     error = (
@@ -86,7 +97,7 @@ class RetryCurlSession(InheritableCurlSession):
                         f"{method} {response.url}"
                     )
 
-                if (
+                if not retry and (
                     response.status_code not in RETRYABLE_STATUS_CODES
                     or attempt == max_attempts
                 ):
@@ -102,9 +113,12 @@ class RetryCurlSession(InheritableCurlSession):
 
                     raise
 
-            logger.debug(f"Attempt {attempt} failed: {error}")
+            if error is not None:
+                logger.debug(
+                    f"Attempt {attempt}/{max_attempts} failed: {error}",
+                )
 
-            if (
+            if not retry and (
                 response is None
                 or response.status_code not in RATE_LIMIT_STATUS_CODES
             ):
@@ -117,6 +131,9 @@ class RetryCurlSession(InheritableCurlSession):
             await asyncio.sleep(delay)
 
             attempt += 1
+
+            if retry:
+                logger.debug(f"Retrying {method} {url}")
 
 
 class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):

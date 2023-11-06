@@ -35,45 +35,57 @@ class LinkStatus(IntEnum):
     POSSIBLY_BROKEN = 3
 
 
-class TitleTagFound(Exception):
-    pass
-
-
-class TitleHTMLParser(HTMLParser):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.stack = []
+class _HTMLParser(HTMLParser):
+    def reset(self, *args, **kwargs):
+        self._path = []
+        self.body_text = ""
         self.title = ""
 
-    def feed(self, *args, **kwargs):
-        try:
-            super().feed(*args, **kwargs)
-        except TitleTagFound:
-            pass
+        return super().reset(*args, **kwargs)
 
     def handle_starttag(self, tag, attrs):
-        self.stack.append(tag)
+        self._path.append(tag)
 
     def handle_endtag(self, tag):
-        self.stack.pop()
+        self._path.pop()
 
     def handle_data(self, data):
-        if self.stack != ["html", "head", "title"]:
-            return
-
-        self.title = data.strip()
-
-        raise TitleTagFound()
+        match self._path:
+            case ["html", "body"]:
+                self.body_text = data.strip()
+            case ["html", "head", "title"]:
+                self.title = data.strip()
 
 
 async def check_is_link_broken(session, url):
+    html_parser = None
+
+    def retry_predicate(response):
+        if response.status_code != 200:
+            return False
+
+        nonlocal html_parser
+
+        if html_parser is None:
+            html_parser = _HTMLParser()
+        else:
+            html_parser.reset()
+
+        # TODO: Switch to acontent() on >=v0.5.10
+        html_parser.feed(response.content.decode(response.charset, "replace"))
+
+        return html_parser.body_text == "Loading..."  # Rate limit hit
+
     link_status = LinkStatus.OK
     error = None
     fixed_url = None
 
     try:
-        response = await session.get(url, allow_redirects=False)
+        response = await session.get(
+            url,
+            allow_redirects=False,
+            retry_predicate=retry_predicate,
+        )
     except RequestsError as error:
         link_status = LinkStatus.POSSIBLY_BROKEN
         error = str(error)
@@ -81,23 +93,15 @@ async def check_is_link_broken(session, url):
         return link_status, error, fixed_url
 
     if response.status_code == 200:
-        title_parser = TitleHTMLParser()
-        # TODO: Switch to acontent() on >=v0.5.10
-        title_parser.feed(response.content.decode(response.charset, "replace"))
-
-        if not title_parser.title:  # May be rate limit response
-            link_status = LinkStatus.POSSIBLY_BROKEN
-            error = "Missing title"
-        elif (
+        if (
             match := re.fullmatch(
                 r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
-                title_parser.title,
+                html_parser.title,
             )
         ) is not None:
             link_status = LinkStatus.BROKEN
             error = match.group(1)
 
-        if error is not None:
             return link_status, error, fixed_url
 
     if response.ok and response.status_code not in REDIRECT_STATUS_CODES:
