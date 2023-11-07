@@ -33,6 +33,7 @@ class LinkStatus(IntEnum):
     OK = 1
     BROKEN = 2
     POSSIBLY_BROKEN = 3
+    BLOCKED = 4
 
 
 class _HTMLParser(HTMLParser):
@@ -92,22 +93,28 @@ async def check_is_link_broken(session, url):
 
         return link_status, error, fixed_url
 
-    if response.status_code == 200:
-        if (
-            match := re.fullmatch(
-                r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
-                html_parser.title,
-            )
-        ) is not None:
-            link_status = LinkStatus.BROKEN
-            error = match.group(1)
+    match response.status_code:
+        case 200:
+            if (
+                match := re.fullmatch(
+                    r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
+                    html_parser.title,
+                )
+            ) is not None:
+                link_status = LinkStatus.BROKEN
+                error = match.group(1)
+        case 401 | 403:
+            link_status = LinkStatus.BLOCKED
 
-            return link_status, error, fixed_url
-
-    if response.ok and response.status_code not in REDIRECT_STATUS_CODES:
+    if error is not None or (
+        response.ok and response.status_code not in REDIRECT_STATUS_CODES
+    ):
         return link_status, error, fixed_url
 
     error = f"{response.status_code} {response.reason}"
+
+    if link_status != LinkStatus.OK:
+        return link_status, error, fixed_url
 
     if (
         response.status_code

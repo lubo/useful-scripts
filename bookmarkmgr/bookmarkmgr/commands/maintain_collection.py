@@ -13,6 +13,12 @@ from ..logging import get_logger
 
 logger = get_logger()
 
+LINK_STATUS_TAGS = {
+    LinkStatus.BROKEN: "broken",
+    LinkStatus.POSSIBLY_BROKEN: "possibly-broken",
+    LinkStatus.BLOCKED: "blocked",
+}
+
 
 @asynccontextmanager
 async def get_progress_bar():
@@ -116,7 +122,7 @@ def add_or_remove_tag(raindrop, add_tag, tag, error):
     error_message = f"{error}: {link}"
 
     if add_tag and tag_added:
-        logger.debug(f"Link still broken: {error_message}")
+        logger.debug(f"Link still {tag}: {error_message}")
 
         return
 
@@ -132,7 +138,7 @@ def process_check_broken_result(task, raindrop, metadata, today):
     link_status, error, fixed_url = task.result()
     metadata["Last check"] = str(today)
 
-    if link_status == LinkStatus.OK:
+    if link_status not in {LinkStatus.BROKEN, LinkStatus.POSSIBLY_BROKEN}:
         if "Broken since" in metadata:
             del metadata["Broken since"]
     elif fixed_url is None:
@@ -154,19 +160,13 @@ def process_check_broken_result(task, raindrop, metadata, today):
         link_status = LinkStatus.OK
         raindrop["link"] = fixed_url
 
-    add_or_remove_tag(
-        raindrop,
-        link_status == LinkStatus.BROKEN,
-        "broken",
-        error,
-    )
-
-    add_or_remove_tag(
-        raindrop,
-        link_status == LinkStatus.POSSIBLY_BROKEN,
-        "possibly-broken",
-        error,
-    )
+    for status, tag in LINK_STATUS_TAGS.items():
+        add_or_remove_tag(
+            raindrop,
+            link_status == status,
+            tag,
+            error,
+        )
 
 
 async def maintain_raindrop(
