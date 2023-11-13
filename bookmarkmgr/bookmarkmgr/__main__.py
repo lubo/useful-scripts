@@ -14,6 +14,22 @@ from .commands.export_collection import export_collection
 from .commands.maintain_collection import maintain_collection
 
 
+def _host_rate_limits_parser():
+    index = 0
+
+    def parse(value):
+        nonlocal index
+
+        if index > 0:
+            value = int(value)
+
+        index += 1
+
+        return value
+
+    return parse
+
+
 async def main():
     logging.basicConfig(
         level=logging.WARNING if DEBUG else logging.ERROR,
@@ -38,6 +54,16 @@ async def main():
     maintain_collection_parser.add_argument(
         "collection_id",
         help="ID of a collection to be maintained",
+    )
+    maintain_collection_parser.add_argument(
+        "--host-rate-limit",
+        action="append",
+        default=[],
+        dest="host_rate_limits",
+        help="Sets rate limit for a hostname during link checks",
+        metavar=("hostname", "limit", "period"),
+        nargs=3,
+        type=_host_rate_limits_parser(),
     )
     maintain_collection_parser.add_argument(
         "--no-archive",
@@ -67,6 +93,7 @@ async def main():
                 await maintain_collection(
                     raindrop_client,
                     args.collection_id,
+                    args.host_rate_limits,
                     args.no_archive,
                     args.no_archive_broken,
                     args.no_checks,
