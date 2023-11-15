@@ -25,7 +25,10 @@ commit_changes() {
 run_maintenance() {
 	echo "Running maintenance…"
 
-	__bookmarkmgr maintain-collection "${BOOKMARK_RAINDROP_COLLECTION}"
+	mapfile -t flags < <(xargs -n 1 <<<"${BOOKMARK_MAINTENANCE_FLAGS}")
+
+	__bookmarkmgr maintain-collection "${BOOKMARK_RAINDROP_COLLECTION}" \
+		"${flags[@]}"
 }
 
 export_bookmarks() {
