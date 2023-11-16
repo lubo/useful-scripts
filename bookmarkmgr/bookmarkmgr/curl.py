@@ -64,8 +64,11 @@ class RetryCurlSession(CurlSession):
 
         self.rate_limit_timeout = rate_limit_timeout
 
-    async def _request(self, *args, **kwargs):
-        return await super().request(*args, **kwargs)
+    async def _request(self, method, url, *args, is_retry, **kwargs):
+        if is_retry:
+            logger.debug(f"Retrying {method} {url}")
+
+        return await super().request(method, url, *args, **kwargs)
 
     async def request(
         self,
@@ -77,6 +80,7 @@ class RetryCurlSession(CurlSession):
     ):
         attempt = 1
         factor = 1
+        is_retry = False
         max_attempts = 5
         start_delay = 2.5
 
@@ -86,12 +90,22 @@ class RetryCurlSession(CurlSession):
             error = None
 
             try:
-                response = await self._request(method, url, *args, **kwargs)
+                response = await self._request(
+                    method,
+                    url,
+                    *args,
+                    is_retry=is_retry,
+                    **kwargs,
+                )
 
                 if retry_predicate is not None:
                     retry = retry_predicate(response)
 
-                if not response.ok:
+                if retry:
+                    error = (
+                        f"Retry triggered by caller: {method} {response.url}"
+                    )
+                elif not response.ok:
                     error = (
                         f"{response.status_code} {response.reason}: "
                         f"{method} {response.url}"
@@ -113,6 +127,8 @@ class RetryCurlSession(CurlSession):
 
                     raise
 
+            is_retry = True
+
             if error is not None:
                 logger.debug(
                     f"Attempt {attempt}/{max_attempts} failed: {error}",
@@ -131,9 +147,6 @@ class RetryCurlSession(CurlSession):
             await asyncio.sleep(delay)
 
             attempt += 1
-
-            if retry:
-                logger.debug(f"Retrying {method} {url}")
 
 
 class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
