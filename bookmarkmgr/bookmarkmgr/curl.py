@@ -153,12 +153,15 @@ class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
     def __init__(
         self,
         *args,
+        rate_limit,
         rate_limit_period=60,
         **kwargs,
     ):
         super().__init__(
             *args,
             **kwargs,
+            max_clients=rate_limit,
+            rate_limit=rate_limit,
             rate_limit_timeout=rate_limit_period,
         )
 
