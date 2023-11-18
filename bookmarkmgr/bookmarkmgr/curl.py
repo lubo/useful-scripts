@@ -162,6 +162,7 @@ class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
             **kwargs,
             max_clients=rate_limit,
             rate_limit=rate_limit,
+            rate_limit_period=rate_limit_period,
             rate_limit_timeout=rate_limit_period,
         )
 
