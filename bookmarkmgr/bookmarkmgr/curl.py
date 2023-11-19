@@ -1,8 +1,10 @@
 import asyncio
+from contextlib import nullcontext
+from urllib.parse import urlparse
 
 from curl_cffi.requests import AsyncSession, BrowserType, RequestsError
 
-from .asyncio import RateLimiterMixin
+from .asyncio import RateLimiter, RateLimiterMixin
 from .logging import get_logger
 
 logger = get_logger()
@@ -169,3 +171,26 @@ class RateLimitedRetryCurlSession(RateLimiterMixin, RetryCurlSession):
     async def _request(self, *args, **kwargs):
         async with self._rate_limiter:
             return await super()._request(*args, **kwargs)
+
+
+class PerHostnameRateLimitedSession(RetryCurlSession):
+    def __init__(
+        self,
+        *args,
+        host_rate_limits,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self._rate_limiters = {
+            hostname.lower(): RateLimiter(limit, period)
+            for hostname, limit, period in host_rate_limits
+        }
+        self._rate_limiters[None] = nullcontext()
+
+    async def _request(self, method, url, *args, **kwargs):
+        async with self._rate_limiters.get(
+            urlparse(url).hostname.lower(),
+            self._rate_limiters[None],
+        ):
+            return await super()._request(method, url, *args, **kwargs)

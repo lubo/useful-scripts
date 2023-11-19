@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 import enlighten
 
 from ..asyncio import ForgivingTaskGroup
-from ..checks import CheckSessionManager
 from ..checks.broken_link import check_is_link_broken, LinkStatus
 from ..clients.archive_today import ArchiveTodayClient
 from ..clients.wayback_machine import WaybackMachineClient
+from ..curl import PerHostnameRateLimitedSession
 from ..logging import get_logger
 
 logger = get_logger()
@@ -174,7 +174,7 @@ async def maintain_raindrop(
     raindrop,
     at_client,
     wm_client,
-    check_session_manager,
+    check_session,
     no_archive,
     no_archive_broken,
     no_checks,
@@ -233,7 +233,7 @@ async def maintain_raindrop(
                 )
                 else task_group.create_task(
                     check_is_link_broken(
-                        check_session_manager.get_session(link),
+                        check_session,
                         link,
                     ),
                     name=f"Check-If-Broken-{link}",
@@ -301,7 +301,10 @@ async def maintain_collection(
     async with (
         ArchiveTodayClient() as at_client,
         WaybackMachineClient() as wm_client,
-        CheckSessionManager(host_rate_limits) as check_session_manager,
+        PerHostnameRateLimitedSession(
+            host_rate_limits=host_rate_limits,
+            max_clients=100,
+        ) as check_session,
         get_progress_bar() as progress_bar,
         ForgivingTaskGroup() as task_group,
     ):
@@ -320,7 +323,7 @@ async def maintain_collection(
                     item,
                     at_client,
                     wm_client,
-                    check_session_manager,
+                    check_session,
                     no_archive,
                     no_archive_broken,
                     no_checks,
