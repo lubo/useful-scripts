@@ -27,6 +27,12 @@ BROKEN_STATUS_CODES = {
     *NOT_FOUND_STATUS_CODES,
 }
 
+INVALID_HTML_PARENTS = {
+    "base",
+    "link",
+    "meta",
+}
+
 
 @unique
 class LinkStatus(IntEnum):
@@ -45,10 +51,12 @@ class _HTMLParser(HTMLParser):
         return super().reset(*args, **kwargs)
 
     def handle_starttag(self, tag, attrs):
-        self._path.append(tag)
+        if tag not in INVALID_HTML_PARENTS:
+            self._path.append(tag)
 
     def handle_endtag(self, tag):
-        self._path.pop()
+        if len(self._path) > 0 and self._path[-1] == tag:
+            self._path.pop()
 
     def handle_data(self, data):
         match self._path:
