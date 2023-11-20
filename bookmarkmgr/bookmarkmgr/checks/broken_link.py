@@ -102,7 +102,10 @@ async def check_is_link_broken(session, url):
 
     match response.status_code:
         case 200:
-            if (
+            if html_parser.title == "Video deleted":
+                link_status = LinkStatus.BROKEN
+                error = html_parser.title
+            elif (
                 match := re.fullmatch(
                     r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
                     html_parser.title,
