@@ -5,7 +5,11 @@
 set -eo pipefail
 
 __bookmarkmgr() {
-	pass "${RAINDROP_API_KEY_PASS_PATH}" | bookmarkmgr "$@"
+	if [[ ! "${raindrop_api_key}" ]]; then
+		raindrop_api_key="$(pass "${RAINDROP_API_KEY_PASS_PATH}")"
+	fi
+
+	bookmarkmgr "$@" <<<"${raindrop_api_key}"
 }
 
 commit_changes() {
