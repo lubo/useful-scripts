@@ -85,7 +85,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
 
                 archival_url = response.headers["Location"]
 
-                logger.info(f"Archived {archival_url}")
+                logger.info(f"Archived {url}")
 
                 return archival_url, None
 
