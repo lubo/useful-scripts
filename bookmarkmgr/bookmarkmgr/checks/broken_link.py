@@ -18,7 +18,6 @@ REDIRECT_STATUS_CODES = {
 }
 
 NOT_FOUND_STATUS_CODES = {
-    404,
     410,
 }
 
