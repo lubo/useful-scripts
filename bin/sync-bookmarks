@@ -4,12 +4,16 @@
 
 set -eo pipefail
 
+error=false
+
 __bookmarkmgr() {
 	if [[ ! "${raindrop_api_key}" ]]; then
 		raindrop_api_key="$(pass "${RAINDROP_API_KEY_PASS_PATH}")"
 	fi
 
-	bookmarkmgr "$@" <<<"${raindrop_api_key}"
+	if ! bookmarkmgr "$@" <<<"${raindrop_api_key}"; then
+		error=true
+	fi
 }
 
 commit_changes() {
@@ -56,6 +60,10 @@ main() {
 	run_maintenance
 
 	export_bookmarks
+
+	if [[ "${error}" = true ]]; then
+		exit 1
+	fi
 }
 
 main "$@"
