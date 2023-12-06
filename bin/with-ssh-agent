@@ -19,6 +19,12 @@ main() {
 	: "${SHELL:?}"
 
 	EXPECT_SCRIPT="$(cat <<-EOF
+	trap {
+		global spawn_out
+		set rows [stty rows]
+		set cols [stty columns]
+		stty rows \$rows columns \$cols < \$spawn_out(slave,name)
+	} WINCH
 	spawn -noecho "${SHELL}" -i
 	send "PS1=\"(ssh-agent) \\\${PS1}\"\n"
 	interact
