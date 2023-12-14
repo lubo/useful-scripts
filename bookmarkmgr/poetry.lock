@@ -430,6 +430,17 @@ files = [
 ]
 
 [[package]]
+name = "overrides"
+version = "7.4.0"
+description = "A decorator to automatically detect mismatch when overriding a method."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "overrides-7.4.0-py3-none-any.whl", hash = "sha256:3ad24583f86d6d7a49049695efe9933e67ba62f0c7625d53c59fa832ce4b8b7d"},
+    {file = "overrides-7.4.0.tar.gz", hash = "sha256:9502a3cca51f4fac40b5feca985b6703a5c1f6ad815588a7ca9e285b9dca6757"},
+]
+
+[[package]]
 name = "prefixed"
 version = "0.7.0"
 description = "Prefixed alternative numeric library"
@@ -579,4 +590,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "859ba8c33d74fe8aab2d61d64d91beac24e6d1d8f1bfa2f0f4187902a071b399"
+content-hash = "61f03830465946d34b4918c5cbf2cee48ad41574a3e628bacfbd463305ca2c1f"

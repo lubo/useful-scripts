@@ -7,9 +7,7 @@ logger = get_logger()
 
 
 class ForgivingTaskGroup(asyncio.TaskGroup):
-    """
-    TaskGroup that doesn't fail fast on task failure.
-    """
+    """TaskGroup that doesn't fail fast on task failure."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -26,7 +24,7 @@ class ForgivingTaskGroup(asyncio.TaskGroup):
                             f"'{task.get_name()}'\n"
                         ),
                         *traceback.format_exception(exc),
-                    ]
+                    ],
                 ),
             )
 

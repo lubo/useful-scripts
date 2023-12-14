@@ -4,12 +4,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    def do_GET(self):  # noqa: N802
         self.send_response(200)
         self.end_headers()
-        self.wfile.write("<script>window.close()</script>".encode())
+        self.wfile.write(b"<script>window.close()</script>")
 
-        print(
+        print(  # noqa: T201
             tuple(
                 (name, value)
                 for name, value in self.headers.items()

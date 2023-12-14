@@ -1,10 +1,12 @@
 import asyncio
 from html.parser import HTMLParser
-import sys
+from http import HTTPStatus
+import itertools
+
+from bookmarkmgr.cronet import RateLimitedSession
+from bookmarkmgr.logging import get_logger
 
 from . import ClientSessionContextManagerMixin
-from ..cronet import RateLimitedSession
-from ..logging import get_logger
 
 logger = get_logger("bookmarkmgr:AT")
 
@@ -37,7 +39,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
             },
         )
 
-        if response.status_code == 200:
+        if response.status_code == HTTPStatus.OK.value:
             if "Refresh" not in response.headers:
                 html_parser = TextExtractionHTMLParser()
                 html_parser.feed(response.text)
@@ -48,43 +50,42 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
             try:
                 _, wip_url = refresh_header.split("=", 1)
             except ValueError as error:
-                raise Exception(
-                    (
-                        f"Malformed Refresh header: '{refresh_header}': "
-                        f"{response.url}"
-                    ),
-                ) from error
+                message = (
+                    f"Malformed Refresh header: '{refresh_header}': "
+                    f"{response.url}"
+                )
+                raise ValueError(message) from error
 
-            logger.debug(f"Successfully submitted {url}")
+            logger.debug("Successfully submitted %s", url)
 
         start_delay = 5
         delay_factor = 0
 
-        for attempt in range(sys.maxsize):
+        for attempt in itertools.count():
             match response.status_code:
-                case 200:
+                case HTTPStatus.OK.value:
                     pass
-                case 302:
-                    logger.info(f"Archived {url}")
-
-                    return (response.redirect_url, None)
+                case HTTPStatus.FOUND.value:
+                    break
                 case _:
-                    raise Exception(
-                        (
-                            f"Unexpected status code {response.status_code} "
-                            f"for {response.url}"
-                        ),
+                    message = (
+                        f"Unexpected status code {response.status_code} "
+                        f"for {response.url}"
                     )
+                    raise ValueError(message)
 
             if (delay := start_delay * delay_factor) > 0:
                 logger.debug(
                     (
-                        f"Attempt {attempt}: Rechecking archival status in "
-                        f"{delay} seconds for {url}"
+                        "Attempt %d: Rechecking archival status in %d seconds "
+                        "for %s"
                     ),
+                    attempt,
+                    delay,
+                    url,
                 )
 
-                if delay_factor < 60:
+                if delay_factor < 60:  # noqa: PLR2004
                     delay_factor = min(delay_factor * 2, 60)
 
                 await asyncio.sleep(delay)
@@ -95,3 +96,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
                 wip_url,
                 allow_redirects=False,
             )
+
+        logger.info("Archived %s", url)
+
+        return (response.redirect_url, None)

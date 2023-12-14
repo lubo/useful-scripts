@@ -29,7 +29,7 @@ ffibuilder.cdef(
         rf'^.+? ({"|".join(UNDEFINED_SYMBOLS)})\([\S\s]+?\);$',
         "",
         subprocess.run(
-            [
+            [  # noqa: S603
                 "cpp",
                 "-DCOMPONENTS_CRONET_NATIVE_INCLUDE_CRONET_EXPORT_H_",
                 "-DCRONET_EXPORT=",
@@ -88,12 +88,7 @@ ffibuilder.cdef(
 )
 ffibuilder.set_source(
     "bookmarkmgr.cronet._cronet",
-    "\n".join(
-        [
-            "#include <stdbool.h>",
-            CRONET_INCLUDE,
-        ],
-    ),
+    f"#include <stdbool.h>\n{CRONET_INCLUDE}",
     libraries=["cronet"],
 )
 

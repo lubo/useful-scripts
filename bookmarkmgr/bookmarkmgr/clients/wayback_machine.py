@@ -1,13 +1,15 @@
 import asyncio
+from http import HTTPStatus
+import itertools
 import re
-import sys
 from urllib.parse import urlparse
 
 from aiohttp import ClientResponseError
 
+from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
+from bookmarkmgr.logging import get_logger
+
 from . import ClientSessionContextManagerMixin
-from ..aiohttp import RateLimitedRetryClientSession
-from ..logging import get_logger
 
 logger = get_logger("bookmarkmgr:WM")
 
@@ -29,7 +31,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             start_timeout=30,
         )
 
-    async def archive_page(self, url):
+    async def archive_page(self, url):  # noqa: C901
         request_paramaters = {
             "url": url,
         }
@@ -41,19 +43,19 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             archived_snapshots = (await response.json())["archived_snapshots"]
 
         if (closest := archived_snapshots.get("closest")) is not None:
-            logger.info(f"Archival entry found for {url}")
+            logger.info("Archival entry found for %s", url)
 
             archival_url = closest["url"]
 
             if not archival_url.startswith("https://"):
                 parsed_url = urlparse(archival_url)
                 if parsed_url.scheme != "http":
-                    logger.warn(f"Unexpected scheme: {url}")
+                    logger.warning("Unexpected scheme: %s", url)
                 archival_url = parsed_url._replace(scheme="https").geturl()
 
             return archival_url, None
 
-        logger.debug(f"Requesting archival of {url}")
+        logger.debug("Requesting archival of %s", url)
 
         request_headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml",
@@ -73,7 +75,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                 if job_id is None:
                     return None, "Job ID not found"
         except ClientResponseError as error:
-            if error.status != 404:
+            if error.status != HTTPStatus.NOT_FOUND.value:
                 raise
 
             async with self._session.get(
@@ -81,22 +83,27 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                 allow_redirects=False,
                 headers=request_headers,
             ) as response:
-                assert response.status == 302
+                if response.status != HTTPStatus.FOUND.value:
+                    message = (
+                        f"Unexpected status code {response.status_code} "
+                        f"for {response.url}"
+                    )
+                    raise ValueError(message) from None
 
                 archival_url = response.headers["Location"]
 
-                logger.info(f"Archived {url}")
+                logger.info("Archived %s", url)
 
                 return archival_url, None
 
         job_id = job_id.group()
 
-        logger.debug(f"Archiving in progress for {url}")
+        logger.debug("Archiving in progress for %s", url)
 
         delay_factor = 1
 
         # https://github.com/internetarchive/wayback-machine-webextension/blob/edebc9aa49c138fd784f94a1f70e47e0eb583dd9/webextension/scripts/background.js#L147
-        for attempt in range(1, sys.maxsize):
+        for attempt in itertools.count(1):
             async with self._session.get(
                 f"https://web.archive.org/save/status/{job_id}",
                 headers=request_headers,
@@ -107,25 +114,28 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                 case "pending":
                     delay = 6 * delay_factor
 
-                    if delay_factor < 50:
+                    if delay_factor < 50:  # noqa: PLR2004
                         delay_factor = min(delay_factor * 2, 50)
 
                     logger.debug(
                         (
-                            f"Attempt {attempt}: Rechecking archival status "
-                            f"in {delay} seconds for {url}"
+                            "Attempt %d: Rechecking archival status in %d "
+                            "seconds for %s"
                         ),
+                        attempt,
+                        delay,
+                        url,
                     )
 
                     await asyncio.sleep(delay)
-
-                    continue
                 case "success":
-                    logger.info(f"Archived {url}")
-
-                    return (
-                        f"https://web.archive.org/web/{data['timestamp']}/"
-                        f"{data['original_url']}"
-                    ), None
+                    break
                 case _:
                     return None, data["message"]
+
+        logger.info("Archived %s", url)
+
+        return (
+            f"https://web.archive.org/web/{data['timestamp']}/"
+            f"{data['original_url']}"
+        ), None

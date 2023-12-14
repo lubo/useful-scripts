@@ -2,8 +2,9 @@ import asyncio
 import math
 from operator import itemgetter
 
+from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
+
 from . import ClientSessionContextManagerMixin
-from ..aiohttp import RateLimitedRetryClientSession
 
 RAINDROPS_PER_PAGE = 50
 

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Manages bookmarks in raindrop.io.
 
 import argparse

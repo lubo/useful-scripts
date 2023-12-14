@@ -13,12 +13,15 @@ class RequestError(Error):
 
 
 def _raise_for_error_result(result):
-    assert isinstance(result, int)
+    if not isinstance(result, int):
+        raise TypeError(result)
 
     if result >= lib.Cronet_RESULT_SUCCESS:
         return
 
+    message = f"Error result {result} returned"
+
     raise Error(
-        f"Error result {result} returned",
+        message,
         code=result,
     )

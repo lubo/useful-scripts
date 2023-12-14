@@ -1,11 +1,13 @@
 import asyncio
 from contextlib import nullcontext
+from http import HTTPStatus
 from urllib.parse import urlparse
 
 from yarl import URL
 
-from ..asyncio import RateLimiter, RateLimiterMixin
-from ..logging import get_logger
+from bookmarkmgr.asyncio import RateLimiter, RateLimiterMixin
+from bookmarkmgr.logging import get_logger
+
 from ._cronet import lib
 from .default_headers import DEFAULT_HEADERS
 from .errors import _raise_for_error_result, Error, RequestError
@@ -17,15 +19,15 @@ from .utils import adestroying, destroying
 logger = get_logger()
 
 RATE_LIMIT_STATUS_CODES = {
-    408,
-    429,
+    HTTPStatus.REQUEST_TIMEOUT.value,
+    HTTPStatus.TOO_MANY_REQUESTS.value,
 }
 
 TRANSIENT_ERROR_STATUS_CODES = {
-    500,
-    502,
-    503,
-    504,
+    HTTPStatus.INTERNAL_SERVER_ERROR.value,
+    HTTPStatus.BAD_GATEWAY.value,
+    HTTPStatus.SERVICE_UNAVAILABLE.value,
+    HTTPStatus.GATEWAY_TIMEOUT.value,
 }
 
 RETRYABLE_STATUS_CODES = {
@@ -38,10 +40,10 @@ class Session:
     def __init__(self):
         self._engine = None
 
-        self.open()
+        self._open()
 
     async def __aenter__(self):
-        self.open()
+        self._open()
 
         return self
 
@@ -52,7 +54,7 @@ class Session:
         lib.Cronet_Engine_Destroy(self._engine)
         self._engine = None
 
-    def open(self):
+    def _open(self):
         if self._engine is not None:
             return
 
@@ -178,11 +180,11 @@ class RetrySession(Session):
 
     async def _request(self, method, url, *args, is_retry, **kwargs):
         if is_retry:
-            logger.debug(f"Retrying {method} {url}")
+            logger.debug("Retrying %s %s", method, url)
 
         return await super().request(method, url, *args, **kwargs)
 
-    async def request(
+    async def request(  # noqa: C901
         self,
         method,
         url,
@@ -235,7 +237,7 @@ class RetrySession(Session):
                 error = f"{err}: {method} {url}"
 
                 if attempt == max_attempts:
-                    logger.error(error)
+                    logger.error(error)  # noqa: TRY400
 
                     raise
 
@@ -243,7 +245,10 @@ class RetrySession(Session):
 
             if error is not None:
                 logger.debug(
-                    f"Attempt {attempt}/{max_attempts} failed: {error}",
+                    "Attempt %d/%d failed: %s",
+                    attempt,
+                    max_attempts,
+                    error,
                 )
 
             if not retry and (

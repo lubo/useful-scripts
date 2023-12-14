@@ -1,15 +1,15 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import enlighten
 
-from ..asyncio import ForgivingTaskGroup
-from ..checks.broken_link import check_is_link_broken, LinkStatus
-from ..clients.archive_today import ArchiveTodayClient
-from ..clients.wayback_machine import WaybackMachineClient
-from ..cronet import PerHostnameRateLimitedSession
-from ..logging import get_logger
+from bookmarkmgr.asyncio import ForgivingTaskGroup
+from bookmarkmgr.checks.broken_link import check_is_link_broken, LinkStatus
+from bookmarkmgr.clients.archive_today import ArchiveTodayClient
+from bookmarkmgr.clients.wayback_machine import WaybackMachineClient
+from bookmarkmgr.cronet import PerHostnameRateLimitedSession
+from bookmarkmgr.logging import get_logger
 
 logger = get_logger()
 
@@ -95,7 +95,10 @@ def process_archival_result(
         tag = "archival-failed"
 
         logger.error(
-            f"Archival in {service_name} failed: {error}: {raindrop['link']}",
+            "Archival in %s failed: %s: %s",
+            service_name,
+            error,
+            raindrop["link"],
         )
 
     if tag in raindrop["tags"]:
@@ -113,7 +116,7 @@ def add_or_remove_tag(raindrop, add_tag, tag, error):
     link = raindrop["link"]
 
     if not add_tag and tag_added:
-        logger.info(f"Removing #{tag} on {link}")
+        logger.info("Removing #%s on %s", tag, link)
 
         raindrop["tags"] = [t for t in raindrop["tags"] if t != tag]
 
@@ -122,11 +125,11 @@ def add_or_remove_tag(raindrop, add_tag, tag, error):
     error_message = f"{error}: {link}"
 
     if add_tag and tag_added:
-        logger.debug(f"Link still {tag}: {error_message}")
+        logger.debug("Link still %s: %s", tag, error_message)
 
         return
 
-    logger.info(f"{tag.capitalize()} link found: {error_message}")
+    logger.info("%s link found: %s", tag.capitalize(), error_message)
 
     raindrop["tags"] = [*raindrop["tags"], tag]
 
@@ -145,7 +148,7 @@ def process_check_broken_result(task, raindrop, metadata, today):
         try:
             broken_since = datetime.fromisoformat(
                 metadata.get("Broken since"),
-            )
+            ).replace(tzinfo=timezone.utc)
         except (ValueError, TypeError):
             broken_since = today
             metadata["Broken since"] = str(broken_since)
@@ -155,7 +158,7 @@ def process_check_broken_result(task, raindrop, metadata, today):
         ):
             link_status = LinkStatus.BROKEN
     else:
-        logger.info(f"Fixing URL to {fixed_url}")
+        logger.info("Fixing URL to %s", fixed_url)
 
         link_status = LinkStatus.OK
         raindrop["link"] = fixed_url
@@ -169,7 +172,7 @@ def process_check_broken_result(task, raindrop, metadata, today):
         )
 
 
-async def maintain_raindrop(
+async def maintain_raindrop(  # noqa: PLR0913
     raindrop_client,
     raindrop,
     at_client,
@@ -188,14 +191,14 @@ async def maintain_raindrop(
     link = raindrop["link"]
     note_metadata = note_to_metadata(raindrop["note"])
     task_group_error = None
-    today = datetime.today()
+    today = datetime.now(tz=timezone.utc)
 
     try:
         last_check = datetime.fromisoformat(
             note_metadata.get("Last check"),
-        )
+        ).replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
-        last_check = datetime.fromtimestamp(0)
+        last_check = datetime.fromtimestamp(0, tz=timezone.utc)
 
     try:
         async with ForgivingTaskGroup() as task_group:
@@ -288,7 +291,7 @@ async def maintain_raindrop(
             raise task_group_error
 
 
-async def maintain_collection(
+async def maintain_collection(  # noqa: PLR0913
     raindrop_client,
     collection_id,
     host_rate_limits,
@@ -308,7 +311,9 @@ async def maintain_collection(
         ForgivingTaskGroup() as task_group,
     ):
 
-        def on_task_done(task):
+        def on_task_done(
+            task,  # noqa: ARG001
+        ):
             progress_bar.update()
 
         count = 0

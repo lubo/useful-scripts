@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from email.message import Message
+from http import HTTPStatus
 
 
 @dataclass
@@ -21,7 +22,11 @@ class Response:
 
     @property
     def ok(self):
-        return 200 <= self.status_code < 400
+        return (
+            HTTPStatus.OK.value
+            <= self.status_code
+            < HTTPStatus.BAD_REQUEST.value
+        )
 
     @property
     def text(self):

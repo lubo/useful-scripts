@@ -1,29 +1,29 @@
 from enum import IntEnum, unique
 from html.parser import HTMLParser
+from http import HTTPStatus
 import re
 from urllib.parse import urlparse
 
-from ..cronet import RequestError
-
+from bookmarkmgr.cronet import RequestError
 
 PERMANENT_REDIRECT_STATUS_CODES = {
-    301,
-    308,
+    HTTPStatus.MOVED_PERMANENTLY.value,
+    HTTPStatus.PERMANENT_REDIRECT.value,
 }
 
 REDIRECT_STATUS_CODES = {
     *PERMANENT_REDIRECT_STATUS_CODES,
-    302,
-    307,
+    HTTPStatus.FOUND.value,
+    HTTPStatus.TEMPORARY_REDIRECT.value,
 }
 
 PERMANENT_NOT_FOUND_STATUS_CODES = {
-    410,
+    HTTPStatus.GONE.value,
 }
 
 NOT_FOUND_STATUS_CODES = {
     *PERMANENT_NOT_FOUND_STATUS_CODES,
-    404,
+    HTTPStatus.NOT_FOUND.value,
 }
 
 BROKEN_STATUS_CODES = {
@@ -54,7 +54,11 @@ class _HTMLParser(HTMLParser):
 
         return super().reset(*args, **kwargs)
 
-    def handle_starttag(self, tag, attrs):
+    def handle_starttag(
+        self,
+        tag,
+        attrs,  # noqa: ARG002
+    ):
         if tag not in INVALID_HTML_PARENTS:
             self._path.append(tag)
 
@@ -70,11 +74,11 @@ class _HTMLParser(HTMLParser):
                 self.title = data.strip()
 
 
-async def check_is_link_broken(session, url):
+async def check_is_link_broken(session, url):  # noqa: C901
     html_parser = None
 
     def retry_predicate(response):
-        if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK.value:
             return False
 
         nonlocal html_parser

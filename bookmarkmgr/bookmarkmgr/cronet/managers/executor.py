@@ -2,7 +2,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 
-from .._cronet import ffi, lib
+from bookmarkmgr.cronet._cronet import ffi, lib
 
 
 @ffi.def_extern()
@@ -21,7 +21,7 @@ class ExecutorManager:
     async def __aenter__(self):
         if self.executor is None:
             self.executor = lib.Cronet_Executor_CreateWith(
-                lib._executor_execute,
+                lib._executor_execute,  # noqa: SLF001
             )
             lib.Cronet_Executor_SetClientContext(self.executor, self._handle)
 

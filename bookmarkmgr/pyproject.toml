@@ -9,12 +9,30 @@ aiohttp = "^3.9.0"
 aiohttp-retry = {git = "https://github.com/inyutin/aiohttp_retry.git"}
 cffi = "^1.16.0"
 enlighten = "^1.12.0"
+overrides = "^7.4.0"
 python = "^3.11"
 yarl = "^1.9.2"
 
 # https://github.com/python-poetry/poetry/issues/2740
 [tool.poetry.build]
 script = "build.py"
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",
+    "D10",
+    "D203",
+    "D212",
+    "S607",
+]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+order-by-type = false
 
 [build-system]
 requires = [

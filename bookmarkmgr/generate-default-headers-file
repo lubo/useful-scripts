@@ -4,7 +4,7 @@ set -eo pipefail
 
 cd "$(dirname "$0")"
 
-echo "DEFAULT_HEADERS = $(./dump-headers.py)" \
+echo -e "# ruff: noqa: E501\n\nDEFAULT_HEADERS = $(./dump-headers.py)" \
 	| ruff format - \
 	> bookmarkmgr/cronet/default_headers.py \
 	&

@@ -1,41 +1,70 @@
 import asyncio
+from http import HTTPStatus
 
 from aiohttp import (
     ClientConnectionError,
     ClientPayloadError,
     ClientSession,
+    TCPConnector,
     TraceConfig,
 )
 from aiohttp_retry import ExponentialRetry, RetryClient
+from overrides import override
 
 from .asyncio import RateLimiterMixin
 from .logging import get_logger
 
 logger = get_logger()
 
+RATE_LIMIT_STATUS_CODES = {
+    HTTPStatus.REQUEST_TIMEOUT.value,
+    HTTPStatus.TOO_MANY_REQUESTS.value,
+}
 
-async def on_request_end(session, context, params):
+
+async def on_request_end(
+    session,  # noqa: ARG001
+    context,  # noqa: ARG001
+    params,
+):
     if params.response.ok:
         return
 
     logger.error(
-        (
-            f"{params.response.status} {params.response.reason}: "
-            f"{params.method} {params.response.url}"
-        ),
+        "%d %s: %s %s",
+        params.response.status,
+        params.response.reason,
+        params.method,
+        params.response.url,
     )
 
 
-async def on_request_exception(session, context, params):
+async def on_request_exception(
+    session,  # noqa: ARG001
+    context,  # noqa: ARG001
+    params,
+):
     if isinstance(params.exception, asyncio.CancelledError):
         return
 
-    logger.error(f"{params.exception}: {params.method} {params.url}")
+    logger.error(
+        "%s: %s %s",
+        params.exception,
+        params.method,
+        params.url,
+    )
 
 
 trace_config = TraceConfig()
 trace_config.on_request_end.append(on_request_end)
 trace_config.on_request_exception.append(on_request_exception)
+
+
+class RateLimitedClientSession(RateLimiterMixin, ClientSession):
+    @override
+    async def _request(self, *args, **kwargs):
+        async with self._rate_limiter:
+            return await super()._request(*args, **kwargs)
 
 
 class RateLimitRetry(ExponentialRetry):
@@ -45,7 +74,7 @@ class RateLimitRetry(ExponentialRetry):
         self.rate_limit_timeout = rate_limit_timeout
 
     def get_timeout(self, attempt, response, *args, **kwargs):
-        if response is not None and response.status in {408, 429}:
+        if response is not None and response.status in RATE_LIMIT_STATUS_CODES:
             self.attempts += 1
             return self.rate_limit_timeout
 
@@ -67,21 +96,24 @@ class RetryClientSession(RetryClient):
             *args,
             **kwargs,
             base_url=base_url,
+            connector=(
+                None
+                if connection_limit is None
+                else TCPConnector(
+                    limit=connection_limit,
+                )
+            ),
             raise_for_status=raise_for_status,
             trace_configs=trace_configs,
         )
 
-        if connection_limit is not None:
-            self._client._connector._limit = connection_limit
 
-
-class RateLimitedRetryClientSession(RateLimiterMixin, RetryClientSession):
+class RateLimitedRetryClientSession(RetryClientSession):
     def __init__(
         self,
         *args,
         attempts=3,
         connection_limit=None,
-        rate_limit,
         rate_limit_period=60,
         start_timeout=0.25,
         **kwargs,
@@ -89,10 +121,12 @@ class RateLimitedRetryClientSession(RateLimiterMixin, RetryClientSession):
         super().__init__(
             *args,
             **kwargs,
-            client_session=ClientSession(*args, **kwargs),
+            client_session=RateLimitedClientSession(
+                *args,
+                **kwargs,
+                rate_limit_period=rate_limit_period,
+            ),
             connection_limit=connection_limit,
-            rate_limit=rate_limit,
-            rate_limit_period=rate_limit_period,
             retry_options=RateLimitRetry(
                 attempts=attempts,
                 evaluate_response_callback=self.response_callback,
@@ -106,12 +140,8 @@ class RateLimitedRetryClientSession(RateLimiterMixin, RetryClientSession):
             ),
         )
 
-        self._client_request = self._client._request
-        self._client._request = self._request
-
-    async def _request(self, *args, **kwargs):
-        async with self._rate_limiter:
-            return await self._client_request(*args, **kwargs)
-
     async def response_callback(self, response):
-        return response is not None and response.status not in {408, 429}
+        return (
+            response is not None
+            and response.status not in RATE_LIMIT_STATUS_CODES
+        )
