@@ -1,3 +1,6 @@
+import contextlib
+from http import HTTPStatus
+
 from bookmarkmgr.cronet._cronet import ffi, lib
 from bookmarkmgr.cronet.errors import (
     _raise_for_error_result,
@@ -35,6 +38,11 @@ def _process_response(manager, response_info):
     manager.response.status_code = (
         lib.Cronet_UrlResponseInfo_http_status_code_get(response_info)
     )
+    if not manager.response.reason:
+        with contextlib.suppress(ValueError):
+            manager.response.reason = HTTPStatus(
+                manager.response.status_code,
+            ).phrase
 
     for index in range(
         lib.Cronet_UrlResponseInfo_all_headers_list_size(response_info),
