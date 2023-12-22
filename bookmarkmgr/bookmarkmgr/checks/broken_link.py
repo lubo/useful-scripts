@@ -6,29 +6,16 @@ from urllib.parse import urlparse
 
 from bookmarkmgr.cronet import RequestError
 
-PERMANENT_REDIRECT_STATUS_CODES = {
+REDIRECT_STATUS_CODES = {
     HTTPStatus.MOVED_PERMANENTLY.value,
+    HTTPStatus.FOUND.value,
+    HTTPStatus.TEMPORARY_REDIRECT.value,
     HTTPStatus.PERMANENT_REDIRECT.value,
 }
 
-REDIRECT_STATUS_CODES = {
-    *PERMANENT_REDIRECT_STATUS_CODES,
-    HTTPStatus.FOUND.value,
-    HTTPStatus.TEMPORARY_REDIRECT.value,
-}
-
-PERMANENT_NOT_FOUND_STATUS_CODES = {
-    HTTPStatus.GONE.value,
-}
-
 NOT_FOUND_STATUS_CODES = {
-    *PERMANENT_NOT_FOUND_STATUS_CODES,
     HTTPStatus.NOT_FOUND.value,
-}
-
-BROKEN_STATUS_CODES = {
-    *PERMANENT_REDIRECT_STATUS_CODES,
-    *PERMANENT_NOT_FOUND_STATUS_CODES,
+    HTTPStatus.GONE.value,
 }
 
 INVALID_HTML_PARENTS = {
@@ -134,12 +121,12 @@ async def check_is_link_broken(session, url):  # noqa: C901
     if link_status != LinkStatus.OK:
         return link_status, error, fixed_url
 
+    link_status = LinkStatus.POSSIBLY_BROKEN
+
     if (
         response.status_code
         not in REDIRECT_STATUS_CODES | NOT_FOUND_STATUS_CODES
     ):
-        link_status = LinkStatus.POSSIBLY_BROKEN
-
         return link_status, error, fixed_url
 
     # Raindrop breaks some links during import by removing trailing slash.
@@ -150,11 +137,6 @@ async def check_is_link_broken(session, url):  # noqa: C901
         ).geturl()
         if not parsed_url.path.endswith("/")
         else url
-    )
-    link_status = (
-        LinkStatus.BROKEN
-        if response.status_code in BROKEN_STATUS_CODES
-        else LinkStatus.POSSIBLY_BROKEN
     )
 
     if (
