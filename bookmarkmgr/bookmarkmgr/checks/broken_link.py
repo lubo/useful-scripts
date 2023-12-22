@@ -61,7 +61,7 @@ class _HTMLParser(HTMLParser):
                 self.title = data.strip()
 
 
-async def check_is_link_broken(session, url):  # noqa: C901
+async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
     html_parser = None
 
     def retry_predicate(response):
@@ -123,34 +123,33 @@ async def check_is_link_broken(session, url):  # noqa: C901
 
     link_status = LinkStatus.POSSIBLY_BROKEN
 
-    if (
+    if not fix_broken or (
         response.status_code
         not in REDIRECT_STATUS_CODES | NOT_FOUND_STATUS_CODES
     ):
         return link_status, error, fixed_url
 
-    # Raindrop breaks some links during import by removing trailing slash.
+    # Raindrop breaks some links during import by removing trailing slash and
+    # by adding trailing slash during new link addition.
     parsed_url = urlparse(url)
-    potentially_fixed_url = (
-        parsed_url._replace(
-            path=f"{parsed_url.path}/",
-        ).geturl()
-        if not parsed_url.path.endswith("/")
-        else url
-    )
+    potentially_fixed_url = parsed_url._replace(
+        path=(
+            parsed_url.path.rstrip("/")
+            if parsed_url.path.endswith("/")
+            else f"{parsed_url.path}/"
+        ),
+    ).geturl()
 
     if (
         response.status_code in REDIRECT_STATUS_CODES
         and response.redirect_url != potentially_fixed_url
-    ) or (
-        response.status_code in NOT_FOUND_STATUS_CODES
-        and url == potentially_fixed_url
     ):
         return link_status, error, fixed_url
 
     new_link_status, _, _ = await check_is_link_broken(
         session,
         potentially_fixed_url,
+        fix_broken=False,
     )
 
     if new_link_status == LinkStatus.OK:
