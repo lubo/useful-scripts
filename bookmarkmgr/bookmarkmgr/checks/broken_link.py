@@ -108,6 +108,14 @@ async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
             ) is not None:
                 link_status = LinkStatus.BROKEN
                 error = match.group(1)
+            elif (
+                match := re.fullmatch(
+                    r"(Video Disabled) - [a-zA-Z]{7}\.[a-z]{3}",
+                    html_parser.title,
+                )
+            ) is not None:
+                link_status = LinkStatus.POSSIBLY_BROKEN
+                error = match.group(1)
         case 401 | 403:
             link_status = LinkStatus.BLOCKED
 
