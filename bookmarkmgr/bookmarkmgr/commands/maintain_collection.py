@@ -6,6 +6,7 @@ import enlighten
 
 from bookmarkmgr.asyncio import ForgivingTaskGroup
 from bookmarkmgr.checks.broken_link import check_is_link_broken, LinkStatus
+from bookmarkmgr.checks.duplicate_link import DuplicateLinkChecker
 from bookmarkmgr.clients.archive_today import ArchiveTodayClient
 from bookmarkmgr.clients.wayback_machine import WaybackMachineClient
 from bookmarkmgr.cronet import PerHostnameRateLimitedSession
@@ -107,7 +108,7 @@ def process_archival_result(
     raindrop["tags"] = [*raindrop["tags"], tag]
 
 
-def add_or_remove_tag(raindrop, add_tag, tag, error):
+def add_or_remove_tag(raindrop, add_tag, tag, error=None):
     tag_added = tag in raindrop["tags"]
 
     if not add_tag and not tag_added:
@@ -122,7 +123,7 @@ def add_or_remove_tag(raindrop, add_tag, tag, error):
 
         return
 
-    error_message = f"{error}: {link}"
+    error_message = link if error is None else f"{error}: {link}"
 
     if add_tag and tag_added:
         logger.debug("Link still %s: %s", tag, error_message)
@@ -172,12 +173,24 @@ def process_check_broken_result(task, raindrop, metadata, today):
         )
 
 
+def process_check_duplicate_result(task, raindrop):
+    if task is None or task.exception() is not None:
+        return
+
+    add_or_remove_tag(
+        raindrop,
+        task.result(),
+        "duplicate",
+    )
+
+
 async def maintain_raindrop(  # noqa: PLR0913
     raindrop_client,
     raindrop,
     at_client,
     wm_client,
     check_session,
+    duplicate_checker,
     no_archive,
     no_archive_broken,
     no_checks,
@@ -242,6 +255,15 @@ async def maintain_raindrop(  # noqa: PLR0913
                     name=f"Check-If-Broken-{link}",
                 )
             )
+
+            check_duplicate_task = (
+                None
+                if no_checks
+                else task_group.create_task(
+                    duplicate_checker.is_link_duplicate(raindrop),
+                    name=f"Check-Is-Duplicate-{link}",
+                )
+            )
     except ExceptionGroup as error:
         task_group_error = error
 
@@ -269,6 +291,11 @@ async def maintain_raindrop(  # noqa: PLR0913
             updated_raindrop,
             note_metadata,
             today,
+        )
+
+        process_check_duplicate_result(
+            check_duplicate_task,
+            updated_raindrop,
         )
 
         if raindrop["note"] != (new_note := metadata_to_note(note_metadata)):
@@ -300,6 +327,7 @@ async def maintain_collection(  # noqa: PLR0913
     no_checks,
 ):
     items = raindrop_client.get_collection_items(collection_id)
+    duplicate_checker = DuplicateLinkChecker()
 
     async with (
         ArchiveTodayClient() as at_client,
@@ -328,6 +356,7 @@ async def maintain_collection(  # noqa: PLR0913
                     at_client,
                     wm_client,
                     check_session,
+                    duplicate_checker,
                     no_archive,
                     no_archive_broken,
                     no_checks,
@@ -336,4 +365,8 @@ async def maintain_collection(  # noqa: PLR0913
             )
             task.add_done_callback(on_task_done)
 
+            duplicate_checker.add_link(item)
+
         progress_bar.total = count
+
+        duplicate_checker.set_all_links_received()
