@@ -22,19 +22,21 @@ LINK_STATUS_TAGS = {
 
 
 @asynccontextmanager
-async def get_progress_bar():
-    progress_bar = enlighten.get_manager().counter(
-        desc="Maintaining",
+async def get_progress_bar(manager, description, **kwargs):
+    progress_bar = manager.counter(
+        desc=description,
         unit="links",
+        **kwargs,
     )
     stop_refreshing = False
 
     async def refresh():
         while True:
-            progress_bar.refresh()
-
             if stop_refreshing:
+                progress_bar.close()
                 break
+
+            progress_bar.refresh()
 
             await asyncio.sleep(1)
 
@@ -328,6 +330,7 @@ async def maintain_collection(  # noqa: PLR0913
 ):
     items = raindrop_client.get_collection_items(collection_id)
     duplicate_checker = DuplicateLinkChecker()
+    progress_bar_manager = enlighten.get_manager()
 
     async with (
         ArchiveTodayClient() as at_client,
@@ -335,19 +338,25 @@ async def maintain_collection(  # noqa: PLR0913
         PerHostnameRateLimitedSession(
             host_rate_limits=host_rate_limits,
         ) as check_session,
-        get_progress_bar() as progress_bar,
+        get_progress_bar(
+            progress_bar_manager,
+            "Maintaining",
+        ) as maintaining_progress_bar,
         ForgivingTaskGroup() as task_group,
+        get_progress_bar(
+            progress_bar_manager,
+            "  Loading",
+            leave=False,
+        ) as loading_progress_bar,
     ):
 
         def on_task_done(
             task,  # noqa: ARG001
         ):
-            progress_bar.count += 1
-
-        count = 0
+            maintaining_progress_bar.count += 1
 
         async for item in items:
-            count += 1
+            loading_progress_bar.count += 1
 
             task = task_group.create_task(
                 maintain_raindrop(
@@ -367,6 +376,6 @@ async def maintain_collection(  # noqa: PLR0913
 
             duplicate_checker.add_link(item)
 
-        progress_bar.total = count
+        maintaining_progress_bar.total = loading_progress_bar.count
 
         duplicate_checker.set_all_links_received()
