@@ -1,3 +1,4 @@
+import asyncio
 from enum import IntEnum, unique
 from html.parser import HTMLParser
 from http import HTTPStatus
@@ -64,7 +65,7 @@ class _HTMLParser(HTMLParser):
 async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
     html_parser = None
 
-    def retry_predicate(response):
+    async def retry_predicate(response):
         if response.status_code != HTTPStatus.OK.value:
             return False
 
@@ -75,7 +76,7 @@ async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
         else:
             html_parser.reset()
 
-        html_parser.feed(response.text)
+        await asyncio.to_thread(html_parser.feed, response.text)
 
         return html_parser.body_text == "Loading..."  # Rate limit hit
 

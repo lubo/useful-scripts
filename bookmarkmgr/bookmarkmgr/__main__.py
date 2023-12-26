@@ -28,7 +28,23 @@ def _host_rate_limits_parser():
     return parse
 
 
-async def main():
+async def run_command(args, raindrop_api_key):
+    async with RaindropClient(raindrop_api_key) as raindrop_client:
+        match args.command:
+            case "export-collection":
+                await export_collection(raindrop_client, args.collection_id)
+            case "maintain-collection":
+                await maintain_collection(
+                    raindrop_client,
+                    args.collection_id,
+                    args.host_rate_limits,
+                    args.no_archive,
+                    args.no_archive_broken,
+                    args.no_checks,
+                )
+
+
+def main():
     logging.basicConfig(
         level=logging.WARNING if DEBUG else logging.ERROR,
     )
@@ -83,20 +99,8 @@ async def main():
 
     api_key = getpass("Raindrop API Key: ") if sys.stdin.isatty() else input()
 
-    async with RaindropClient(api_key) as raindrop_client:
-        match args.command:
-            case "export-collection":
-                await export_collection(raindrop_client, args.collection_id)
-            case "maintain-collection":
-                await maintain_collection(
-                    raindrop_client,
-                    args.collection_id,
-                    args.host_rate_limits,
-                    args.no_archive,
-                    args.no_archive_broken,
-                    args.no_checks,
-                )
+    asyncio.run(run_command(args, api_key))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

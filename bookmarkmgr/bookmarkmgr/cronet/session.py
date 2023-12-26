@@ -213,7 +213,7 @@ class RetrySession(Session):
                 )
 
                 if retry_predicate is not None:
-                    retry = retry_predicate(response)
+                    retry = await retry_predicate(response)
 
                 if retry:
                     error = (
