@@ -342,7 +342,7 @@ async def maintain_collection(  # noqa: PLR0913
         def on_task_done(
             task,  # noqa: ARG001
         ):
-            progress_bar.update()
+            progress_bar.count += 1
 
         count = 0
 
