@@ -376,6 +376,8 @@ async def maintain_collection(  # noqa: PLR0913
 
             duplicate_checker.add_link(item)
 
+            await asyncio.sleep(0)
+
         maintaining_progress_bar.total = loading_progress_bar.count
 
         duplicate_checker.set_all_links_received()
