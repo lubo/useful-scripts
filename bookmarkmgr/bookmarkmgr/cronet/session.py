@@ -6,17 +6,15 @@ from urllib.parse import urlparse
 from yarl import URL
 
 from bookmarkmgr.asyncio import RateLimiter, RateLimiterMixin
-from bookmarkmgr.logging import get_logger
 
 from ._cronet import lib
 from .default_headers import DEFAULT_HEADERS
 from .errors import _raise_for_error_result, Error, RequestError
+from .logging import logger
 from .managers.executor import ExecutorManager
 from .managers.request_callback import RequestCallbackManager
 from .models import RequestParameters
 from .utils import adestroying, destroying
-
-logger = get_logger()
 
 RATE_LIMIT_STATUS_CODES = {
     HTTPStatus.REQUEST_TIMEOUT.value,
