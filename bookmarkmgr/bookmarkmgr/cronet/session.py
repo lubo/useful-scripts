@@ -230,14 +230,14 @@ class RetrySession(Session):
                     or attempt == max_attempts
                 ):
                     if error is not None:
-                        logger.error(error)
+                        logger.debug(error)
 
                     return response
             except RequestError as err:
                 error = f"{err}: {method} {url}"
 
                 if attempt == max_attempts:
-                    logger.error(error)  # noqa: TRY400
+                    logger.debug(error)
 
                     raise
 
