@@ -7,11 +7,10 @@ class _Link:
         self.created = datetime.fromisoformat(raindrop["created"])
         self.id = raindrop["_id"]
 
-
-def _is_first_link_older(link1, link2):
-    return link1.created < link2.created or (
-        link1.created == link2.created and link1.id < link2.id
-    )
+    def __lt__(self, other):
+        return self.created < other.created or (
+            self.created == other.created and self.id < other.id
+        )
 
 
 class DuplicateLinkChecker:
@@ -24,10 +23,7 @@ class DuplicateLinkChecker:
         original_link = self._original_links.get(url)
         tested_link = _Link(raindrop)
 
-        if original_link is None or _is_first_link_older(
-            tested_link,
-            original_link,
-        ):
+        if original_link is None or tested_link < original_link:
             self._original_links[url] = tested_link
 
     async def is_link_duplicate(self, raindrop):
@@ -37,7 +33,7 @@ class DuplicateLinkChecker:
         original_link = self._original_links[raindrop["link"]]
         tested_link = _Link(raindrop)
 
-        return _is_first_link_older(original_link, tested_link)
+        return original_link < tested_link
 
     def set_all_links_received(self):
         self._all_links_received.set()
