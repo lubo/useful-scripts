@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 
 from .logging import get_logger
 
@@ -17,15 +16,10 @@ class ForgivingTaskGroup(asyncio.TaskGroup):
     def _on_task_done(self, task, *args, **kwargs):
         if not task.cancelled() and (exc := task.exception()) is not None:
             logger.error(
-                "".join(
-                    [
-                        (
-                            f"Unhandled error occurred while running task "
-                            f"'{task.get_name()}'\n"
-                        ),
-                        *traceback.format_exception(exc),
-                    ],
-                ),
+                "Unhandled error occurred in task '%s': %s: %s",
+                task.get_name(),
+                type(exc).__name__,
+                exc,
             )
 
         return super()._on_task_done(task, *args, **kwargs)
