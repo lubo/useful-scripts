@@ -15,7 +15,7 @@ class ForgivingTaskGroup(asyncio.TaskGroup):
 
     def _on_task_done(self, task, *args, **kwargs):
         if not task.cancelled() and (exc := task.exception()) is not None:
-            logger.error(
+            logger.critical(
                 "Unhandled error occurred in task '%s': %s: %s",
                 task.get_name(),
                 type(exc).__name__,
