@@ -73,7 +73,8 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                 job_id = re.search(r"spn2-[a-z0-9-]*", await response.text())
 
                 if job_id is None:
-                    return None, "Job ID not found"
+                    message = "Job ID not found"
+                    raise ValueError(message)
         except ClientResponseError as error:
             if error.status != HTTPStatus.NOT_FOUND.value:
                 raise
