@@ -13,6 +13,15 @@ from . import ClientSessionContextManagerMixin
 
 logger = get_logger("bookmarkmgr:WM")
 
+# Uncomment relevant errors when suppressing them is desired.
+_IGNORED_ERRORS = {
+    "error:no-access",
+    # Some sites are permanently unavailable to WM
+    # "error:service-unavailable",  # noqa: ERA001
+    # 410 Gone is classified as unknown error
+    # "error:unknown",  # noqa: ERA001
+}
+
 
 class WaybackMachineClient(ClientSessionContextManagerMixin):
     def __init__(self):
@@ -132,7 +141,11 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                 case "success":
                     break
                 case _:
-                    return None, data["message"]
+                    if data.get("status_ext") in _IGNORED_ERRORS:
+                        return None, data["message"]
+
+                    message = f"Unexpected status response for {url}: {data}"
+                    raise ValueError(message)
 
         logger.info("Archived %s", url)
 
