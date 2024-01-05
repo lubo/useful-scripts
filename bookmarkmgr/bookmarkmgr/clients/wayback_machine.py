@@ -66,6 +66,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
 
         logger.debug("Requesting archival of %s", url)
 
+        job_id_match = None
         request_headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml",
         }
@@ -79,15 +80,15 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                 params=request_paramaters,
             ) as response:
                 # https://github.com/internetarchive/wayback-machine-webextension/blob/edebc9aa49c138fd784f94a1f70e47e0eb583dd9/webextension/scripts/background.js#L132
-                job_id = re.search(r"spn2-[a-z0-9-]*", await response.text())
-
-                if job_id is None:
-                    message = "Job ID not found"
-                    raise ValueError(message)
+                job_id_match = re.search(
+                    r"spn2-[a-z0-9-]*",
+                    await response.text(),
+                )
         except ClientResponseError as error:
             if error.status != HTTPStatus.NOT_FOUND.value:
                 raise
 
+        if job_id_match is None:
             async with self._session.get(
                 f"https://web.archive.org/save/{url}",
                 allow_redirects=False,
@@ -106,7 +107,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
 
                 return archival_url, None
 
-        job_id = job_id.group()
+        job_id = job_id_match.group()
 
         logger.debug("Archiving in progress for %s", url)
 
