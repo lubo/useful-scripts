@@ -14,6 +14,15 @@ class _Link:
         )
 
 
+def _remove_query_from_url(url):
+    parsed_url = urlparse(url)
+
+    if parsed_url.query == "":
+        return url
+
+    return parsed_url._replace(query="").geturl()
+
+
 class DuplicateLinkChecker:
     def __init__(self):
         self._all_links_received = Event()
@@ -32,13 +41,10 @@ class DuplicateLinkChecker:
             await self._all_links_received.wait()
 
         url = raindrop["link"]
-        parsed_url = urlparse(url)
+        queryless_url = _remove_query_from_url(url)
 
-        if (
-            parsed_url.query != ""
-            and parsed_url._replace(query="").geturl() in self._original_links
-        ):
-            return True
+        if queryless_url != url and queryless_url in self._original_links:
+            url = queryless_url
 
         original_link = self._original_links[url]
         tested_link = _Link(raindrop)
@@ -46,4 +52,16 @@ class DuplicateLinkChecker:
         return original_link < tested_link
 
     def set_all_links_received(self):
+        for url, link in self._original_links.items():
+            queryless_url = _remove_query_from_url(url)
+
+            if (
+                queryless_url == url
+                or queryless_url not in self._original_links
+            ):
+                continue
+
+            if link < self._original_links[queryless_url]:
+                self._original_links[queryless_url] = link
+
         self._all_links_received.set()
