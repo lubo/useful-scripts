@@ -46,6 +46,7 @@ async def run_command(args, raindrop_api_key):
 
 def main():
     logging.basicConfig(
+        format=f"%(asctime)s:{logging.BASIC_FORMAT}",
         level=logging.WARNING if DEBUG else logging.ERROR,
     )
 
