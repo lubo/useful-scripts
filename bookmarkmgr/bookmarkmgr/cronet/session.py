@@ -16,6 +16,8 @@ from .managers.request_callback import RequestCallbackManager
 from .models import RequestParameters
 from .utils import adestroying, destroying
 
+INIT_MAX_RETRY_ATTEMPTS = 5
+
 RATE_LIMIT_STATUS_CODES = {
     HTTPStatus.REQUEST_TIMEOUT.value,
     HTTPStatus.TOO_MANY_REQUESTS.value,
@@ -193,7 +195,7 @@ class RetrySession(Session):
         attempt = 1
         factor = 1
         is_retry = False
-        max_attempts = 5
+        max_attempts = INIT_MAX_RETRY_ATTEMPTS
         start_delay = 2.5
 
         while True:
@@ -242,7 +244,12 @@ class RetrySession(Session):
             is_retry = True
 
             if error is not None:
-                logger.debug(
+                log_function = (
+                    logger.warn
+                    if attempt % (INIT_MAX_RETRY_ATTEMPTS * 2) == 0
+                    else logger.debug
+                )
+                log_function(
                     "Attempt %d/%d failed: %s",
                     attempt,
                     max_attempts,
