@@ -1,5 +1,6 @@
 from asyncio import Event
 from datetime import datetime
+from urllib.parse import urlparse
 
 
 class _Link:
@@ -30,7 +31,16 @@ class DuplicateLinkChecker:
         if not self._all_links_received.is_set():
             await self._all_links_received.wait()
 
-        original_link = self._original_links[raindrop["link"]]
+        url = raindrop["link"]
+        parsed_url = urlparse(url)
+
+        if (
+            parsed_url.query != ""
+            and parsed_url._replace(query="").geturl() in self._original_links
+        ):
+            return True
+
+        original_link = self._original_links[url]
         tested_link = _Link(raindrop)
 
         return original_link < tested_link
