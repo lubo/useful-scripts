@@ -215,6 +215,8 @@ async def maintain_raindrop(  # noqa: PLR0913
     except (ValueError, TypeError):
         last_check = datetime.fromtimestamp(0, tz=timezone.utc)
 
+    duplicate_checker.add_link(raindrop)
+
     try:
         async with ForgivingTaskGroup() as task_group:
             at_archival_task = (
@@ -374,10 +376,10 @@ async def maintain_collection(  # noqa: PLR0913
             )
             task.add_done_callback(on_task_done)
 
-            duplicate_checker.add_link(item)
-
             await asyncio.sleep(0)
 
         maintaining_progress_bar.total = loading_progress_bar.count
 
-        duplicate_checker.set_all_links_received()
+        duplicate_checker.set_required_link_count(
+            maintaining_progress_bar.total,
+        )

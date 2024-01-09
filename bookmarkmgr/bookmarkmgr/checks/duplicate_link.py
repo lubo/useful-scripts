@@ -26,7 +26,9 @@ def _remove_query_from_url(url):
 class DuplicateLinkChecker:
     def __init__(self):
         self._all_links_received = Event()
+        self._link_count = 0
         self._original_links = {}
+        self._required_link_count = 0
 
     def add_link(self, raindrop):
         url = raindrop["link"]
@@ -35,6 +37,9 @@ class DuplicateLinkChecker:
 
         if original_link is None or tested_link < original_link:
             self._original_links[url] = tested_link
+
+        self._link_count += 1
+        self._process_links()
 
     async def is_link_duplicate(self, raindrop):
         if not self._all_links_received.is_set():
@@ -51,7 +56,14 @@ class DuplicateLinkChecker:
 
         return original_link < tested_link
 
-    def set_all_links_received(self):
+    def set_required_link_count(self, count):
+        self._required_link_count = count
+        self._process_links()
+
+    def _process_links(self):
+        if self._link_count != self._required_link_count:
+            return
+
         for url, link in self._original_links.items():
             queryless_url = _remove_query_from_url(url)
 
