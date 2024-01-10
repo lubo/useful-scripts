@@ -11,7 +11,7 @@ from bookmarkmgr.logging import get_logger
 
 from . import ClientSessionContextManagerMixin
 
-logger = get_logger("bookmarkmgr:WM")
+logger = get_logger("bookmarkmgr/WM")
 
 # Uncomment relevant errors when suppressing them is desired.
 _IGNORED_ERRORS = {

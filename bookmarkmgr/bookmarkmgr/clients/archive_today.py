@@ -8,7 +8,7 @@ from bookmarkmgr.logging import get_logger
 
 from . import ClientSessionContextManagerMixin
 
-logger = get_logger("bookmarkmgr:AT")
+logger = get_logger("bookmarkmgr/AT")
 
 
 class TextExtractionHTMLParser(HTMLParser):
