@@ -4,7 +4,14 @@
 
 from html.parser import HTMLParser
 import json
+from pathlib import Path
 import sys
+
+sys.path.append(
+    str(Path(__file__).resolve().parent / "bookmarkmgr"),
+)
+
+from bookmarkmgr.utils.link_metadata import metadata_from_note  # noqa: E402
 
 
 class Parser(HTMLParser):
@@ -46,7 +53,7 @@ class Parser(HTMLParser):
             case "a":
                 item["title"] = data
             case "dd":
-                item["note"] = data
+                item["metadata"] = metadata_from_note(data)
 
 
 def main():
