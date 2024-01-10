@@ -5,4 +5,8 @@
 
 set -eo pipefail
 
-bookmarks2json < "${1:?}" | jq 'map(del(.last_modified, .metadata."Last check"))'
+bookmarks2json < "${1:?}" \
+	| yq \
+	--width 2147483647 `# -1 doesn't work` \
+	--yaml-output \
+	'map(del(.last_modified, .metadata."Last check"))'
