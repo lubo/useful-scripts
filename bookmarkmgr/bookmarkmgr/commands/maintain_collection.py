@@ -11,6 +11,10 @@ from bookmarkmgr.clients.archive_today import ArchiveTodayClient
 from bookmarkmgr.clients.wayback_machine import WaybackMachineClient
 from bookmarkmgr.cronet import PerHostnameRateLimitedSession
 from bookmarkmgr.logging import get_logger
+from bookmarkmgr.utils.link_metadata import (
+    metadata_from_note,
+    metadata_to_note,
+)
 
 logger = get_logger()
 
@@ -56,26 +60,6 @@ class DefaultsDict(dict):
 
     def __missing__(self, key):
         return self._defaults[key]
-
-
-def metadata_to_note(metadata):
-    return "\n".join(
-        [f"{key}: {value}" for key, value in sorted(metadata.items())],
-    )
-
-
-def note_to_metadata(note):
-    metadata = {}
-
-    for line in note.splitlines():
-        segments = line.split(":", 1)
-
-        if len(segments) == 1:
-            segments.append("")
-
-        metadata[segments[0]] = segments[1].strip()
-
-    return metadata
 
 
 def process_archival_result(
@@ -204,7 +188,7 @@ async def maintain_raindrop(  # noqa: PLR0913
         > 0
     )
     link = raindrop["link"]
-    note_metadata = note_to_metadata(raindrop["note"])
+    note_metadata = metadata_from_note(raindrop["note"])
     task_group_error = None
     today = datetime.now(tz=timezone.utc)
 
