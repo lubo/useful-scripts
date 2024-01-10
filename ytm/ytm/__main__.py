@@ -1,12 +1,10 @@
-#!/usr/bin/env python
-#
 # Provides commands to interact with YouTube Music using
 # https://github.com/sigma67/ytmusicapi.
 
 import argparse
 import csv
 import operator
-import os
+from pathlib import Path
 import sys
 
 from yt_dlp import YoutubeDL
@@ -50,7 +48,7 @@ def songs_by_id(songs):
 
 
 def download_library(client):
-    dest_dir = os.path.join(os.path.expanduser("~"), "Music")
+    dest_dir = Path.home() / "Music"
     downloader = YoutubeDL(
         {
             "format": "141",
@@ -58,7 +56,7 @@ def download_library(client):
                 "Authorization": client.headers["Authorization"],
             },
             "paths": {
-                "home": dest_dir,
+                "home": str(dest_dir),
             },
             "postprocessors": [
                 {
@@ -73,8 +71,11 @@ def download_library(client):
     )
 
     for song in map(get_song_entry, client.get_library_songs(GET_LIMIT)):
-        file_name = f"{song['artist']} - {song['title']}.m4a".replace("/", "∕")
-        if os.path.exists(os.path.join(dest_dir, file_name)):
+        file_name = f"{song['artist']} - {song['title']}.m4a".replace(
+            "/",
+            "∕",  # noqa: RUF001
+        )
+        if Path.exists(dest_dir / file_name):
             continue
         downloader.params["outtmpl"]["default"] = file_name
         downloader.download(
@@ -113,12 +114,12 @@ def sync_playlist(client, playlist_id):
     )
 
     if library_songs.keys() == playlist_songs.keys():
-        print("The playlist is up-to-date.")
+        print("The playlist is up-to-date.")  # noqa: T201
         return
 
     if to_add := [s for s in library_songs if s not in playlist_songs]:
         for song_id in to_add:
-            print(
+            print(  # noqa: T201
                 'Adding "{}"'.format(
                     format_song_entry(get_song_entry(library_songs[song_id])),
                 ),
@@ -128,7 +129,7 @@ def sync_playlist(client, playlist_id):
 
     if to_remove := playlist_songs.keys() - library_songs.keys():
         for song_id in to_remove:
-            print(
+            print(  # noqa: T201
                 'Removing "{}"'.format(
                     format_song_entry(get_song_entry(playlist_songs[song_id])),
                 ),
