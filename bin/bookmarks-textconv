@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# Converts bookmarks to a more diff-friendly format with irrelevant fields
+# removed.
+
+set -eo pipefail
+
+bookmarks2json < "${1:?}" | jq 'map(del(.last_modified))'
