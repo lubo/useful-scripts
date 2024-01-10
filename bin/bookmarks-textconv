@@ -5,4 +5,4 @@
 
 set -eo pipefail
 
-bookmarks2json < "${1:?}" | jq 'map(del(.last_modified))'
+bookmarks2json < "${1:?}" | jq 'map(del(.last_modified, .metadata."Last check"))'
