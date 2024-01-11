@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "bookmarks4diff"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyyaml = "^6.0.1"
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",
+    "D10",
+    "D203",
+    "D212",
+]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+order-by-type = false
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,14 +1,20 @@
-#!/usr/bin/env python
-#
-# Converts bookmarks HTML file to JSON.
+# Converts bookmarks to a more diff-friendly format with irrelevant fields
+# removed.
 
+import argparse
 from html.parser import HTMLParser
-import json
 from pathlib import Path
 import sys
 
+import yaml
+
+try:
+    from yaml import CSafeDumper as YamlSafeDumper
+except ImportError:
+    from yaml import SafeDumper as YamlSafeDumper
+
 sys.path.append(
-    str(Path(__file__).resolve().parent / "bookmarkmgr"),
+    str(Path(__file__).resolve().parent.parent.parent / "bookmarkmgr"),
 )
 
 from bookmarkmgr.utils.link_metadata import metadata_from_note  # noqa: E402
@@ -34,8 +40,10 @@ class Parser(HTMLParser):
             value = attr_value
 
             match name:
-                case "add_date" | "last_modified":
+                case "add_date":
                     value = int(value)
+                case "last_modified":
+                    continue
                 case "tags":
                     value = value.split(",")
 
@@ -53,18 +61,29 @@ class Parser(HTMLParser):
             case "a":
                 item["title"] = data
             case "dd":
-                item["metadata"] = metadata_from_note(data)
+                item["metadata"] = {
+                    key: value
+                    for key, value in metadata_from_note(data).items()
+                    if key != "Last check"
+                }
 
 
 def main():
-    parser = Parser()
-    parser.feed(sys.stdin.read())
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("file", type=argparse.FileType("r"))
+    args = arg_parser.parse_args()
+
+    html_parser = Parser()
+    with args.file:
+        html_parser.feed(args.file.read())
 
     print(  # noqa: T201
-        json.dumps(
-            parser.items,
-            ensure_ascii=False,
-            sort_keys=True,
+        yaml.dump(
+            html_parser.items,
+            allow_unicode=True,
+            default_flow_style=False,
+            Dumper=YamlSafeDumper,
+            width=2147483647,  # -1 doesn't always work
         ),
     )
 
