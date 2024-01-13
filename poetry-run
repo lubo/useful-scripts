@@ -3,7 +3,6 @@
 set -e
 
 PACKAGE_NAME="$(basename "$0")"
+WORKING_DIR="$(dirname "$0")/../${PACKAGE_NAME}"
 
-cd "$(dirname "$0")/../${PACKAGE_NAME}"
-
-exec poetry run python -m "${PACKAGE_NAME}" "$@"
+exec poetry run -C "${WORKING_DIR}" "${PACKAGE_NAME}" "$@"

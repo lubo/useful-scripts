@@ -17,6 +17,9 @@ yarl = "^1.9.2"
 [tool.poetry.build]
 script = "build.py"
 
+[tool.poetry.scripts]
+bookmarkmgr = "bookmarkmgr.__main__:main"
+
 [tool.ruff]
 line-length = 79
 
