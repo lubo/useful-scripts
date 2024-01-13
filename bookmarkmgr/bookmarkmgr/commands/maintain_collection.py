@@ -18,6 +18,11 @@ from bookmarkmgr.utils.link_metadata import (
 
 logger = get_logger()
 
+BROKEN_LINK_STATUSES = {
+    LinkStatus.BROKEN,
+    LinkStatus.POSSIBLY_BROKEN,
+}
+
 LINK_STATUS_TAGS = {
     LinkStatus.BROKEN: "broken",
     LinkStatus.POSSIBLY_BROKEN: "possibly-broken",
@@ -128,27 +133,28 @@ def process_check_broken_result(task, raindrop, metadata, today):
     link_status, error, fixed_url = task.result()
     metadata["Last check"] = str(today)
 
-    if link_status not in {LinkStatus.BROKEN, LinkStatus.POSSIBLY_BROKEN}:
-        if "Broken since" in metadata:
-            del metadata["Broken since"]
-    elif fixed_url is None:
-        try:
-            broken_since = datetime.fromisoformat(
-                metadata.get("Broken since"),
-            ).replace(tzinfo=timezone.utc)
-        except (ValueError, TypeError):
-            broken_since = today
-            metadata["Broken since"] = str(broken_since)
+    if link_status in BROKEN_LINK_STATUSES:
+        if fixed_url is None:
+            try:
+                broken_since = datetime.fromisoformat(
+                    metadata.get("Broken since"),
+                ).replace(tzinfo=timezone.utc)
+            except (ValueError, TypeError):
+                broken_since = today
+                metadata["Broken since"] = str(broken_since)
 
-        if link_status == LinkStatus.POSSIBLY_BROKEN and (
-            today >= broken_since + timedelta(days=7)
-        ):
-            link_status = LinkStatus.BROKEN
-    else:
-        logger.info("Fixing URL to %s", fixed_url)
+            if link_status == LinkStatus.POSSIBLY_BROKEN and (
+                today >= broken_since + timedelta(days=7)
+            ):
+                link_status = LinkStatus.BROKEN
+        else:
+            logger.info("Fixing URL to %s", fixed_url)
 
-        link_status = LinkStatus.OK
-        raindrop["link"] = fixed_url
+            link_status = LinkStatus.OK
+            raindrop["link"] = fixed_url
+
+    if link_status not in BROKEN_LINK_STATUSES and "Broken since" in metadata:
+        del metadata["Broken since"]
 
     for status, tag in LINK_STATUS_TAGS.items():
         add_or_remove_tag(
