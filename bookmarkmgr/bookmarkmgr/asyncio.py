@@ -41,12 +41,18 @@ class RateLimiter:
     async def __aexit__(self, exc_type, exc, tb):
         task = asyncio.create_task(self._release())
         self._release_tasks.add(task)
-        task.add_done_callback(self._release_tasks.remove)
+        task.add_done_callback(self._release_task_done)
 
     async def _release(self):
         await asyncio.sleep(self.period)
 
         self._semaphore.release()
+
+    def _release_task_done(self, task):
+        self._release_tasks.remove(task)
+
+        if not task.cancelled() and task.done():
+            task.result()
 
     def close(self):
         for task in self._release_tasks:
