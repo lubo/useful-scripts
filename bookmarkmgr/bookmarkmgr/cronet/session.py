@@ -291,6 +291,11 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
         async with self._rate_limiter:
             return await super()._request(*args, **kwargs)
 
+    def close(self):
+        super().close()
+
+        self._rate_limiter.close()
+
 
 class PerHostnameRateLimitedSession(RetrySession):
     def __init__(
@@ -301,15 +306,21 @@ class PerHostnameRateLimitedSession(RetrySession):
     ):
         super().__init__(*args, **kwargs)
 
+        self._null_context = nullcontext()
         self._rate_limiters = {
             hostname.lower(): RateLimiter(limit, period)
             for hostname, limit, period in host_rate_limits
         }
-        self._rate_limiters[None] = nullcontext()
 
     async def _request(self, method, url, *args, **kwargs):
         async with self._rate_limiters.get(
             urlparse(url).hostname.lower(),
-            self._rate_limiters[None],
+            self._null_context,
         ):
             return await super()._request(method, url, *args, **kwargs)
+
+    def close(self):
+        super().close()
+
+        for rate_limiter in self._rate_limiters.values():
+            rate_limiter.close()

@@ -48,6 +48,10 @@ class RateLimiter:
 
         self._semaphore.release()
 
+    def close(self):
+        for task in self._release_tasks:
+            task.cancel()
+
 
 class RateLimiterMixin:
     def __init__(

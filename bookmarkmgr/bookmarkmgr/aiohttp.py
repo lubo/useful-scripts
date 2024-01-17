@@ -66,6 +66,12 @@ class RateLimitedClientSession(RateLimiterMixin, ClientSession):
         async with self._rate_limiter:
             return await super()._request(*args, **kwargs)
 
+    @override
+    async def close(self) -> None:
+        await super().close()
+
+        self._rate_limiter.close()
+
 
 class RateLimitRetry(ExponentialRetry):
     def __init__(self, *args, rate_limit_timeout, **kwargs):
