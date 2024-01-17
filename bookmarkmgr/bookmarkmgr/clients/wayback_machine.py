@@ -4,7 +4,7 @@ import itertools
 import re
 from urllib.parse import urlparse
 
-from aiohttp import ClientResponseError
+from aiohttp import ClientError, ClientResponseError
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
 from bookmarkmgr.logging import get_logger
@@ -21,6 +21,10 @@ _IGNORED_ERRORS = {
     # 410 Gone is classified as unknown error
     # "error:unknown",  # noqa: ERA001
 }
+
+
+class WaybackMachineError(Exception):
+    pass
 
 
 class WaybackMachineClient(ClientSessionContextManagerMixin):
@@ -40,7 +44,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             start_timeout=30,
         )
 
-    async def archive_page(self, url):  # noqa: C901
+    async def _archive_page(self, url):  # noqa: C901
         request_paramaters = {
             "url": url,
         }
@@ -99,7 +103,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                         f"Unexpected status code {response.status_code} "
                         f"for {response.url}"
                     )
-                    raise ValueError(message) from None
+                    raise WaybackMachineError(message) from None
 
                 archival_url = response.headers["Location"]
 
@@ -146,7 +150,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
                         return None, data["message"]
 
                     message = f"Unexpected status response for {url}: {data}"
-                    raise ValueError(message)
+                    raise WaybackMachineError(message)
 
         logger.info("Archived %s", url)
 
@@ -154,3 +158,9 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             f"https://web.archive.org/web/{data['timestamp']}/"
             f"{data['original_url']}"
         ), None
+
+    async def archive_page(self, url):
+        try:
+            return await self._archive_page(url)
+        except ClientError as error:
+            raise WaybackMachineError(error) from error

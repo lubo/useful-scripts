@@ -3,12 +3,17 @@ from html.parser import HTMLParser
 from http import HTTPStatus
 import itertools
 
+from bookmarkmgr.cronet import Error as CronetError
 from bookmarkmgr.cronet import RateLimitedSession
 from bookmarkmgr.logging import get_logger
 
 from . import ClientSessionContextManagerMixin
 
 logger = get_logger("bookmarkmgr/AT")
+
+
+class ArchiveTodayError(Exception):
+    pass
 
 
 class TextExtractionHTMLParser(HTMLParser):
@@ -30,7 +35,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
             rate_limit=6,
         )
 
-    async def archive_page(self, url):
+    async def _archive_page(self, url):
         response = await self._session.get(
             "https://archive.ph/submit/",
             allow_redirects=False,
@@ -54,7 +59,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
                     f"Malformed Refresh header: '{refresh_header}': "
                     f"{response.url}"
                 )
-                raise ValueError(message) from error
+                raise ArchiveTodayError(message) from error
 
             logger.debug("Successfully submitted %s", url)
 
@@ -72,7 +77,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
                         f"Unexpected status code {response.status_code} "
                         f"for {response.url}"
                     )
-                    raise ValueError(message)
+                    raise ArchiveTodayError(message)
 
             if (delay := start_delay * delay_factor) > 0:
                 logger.debug(
@@ -100,3 +105,9 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
         logger.info("Archived %s", url)
 
         return (response.redirect_url, None)
+
+    async def archive_page(self, url):
+        try:
+            return await self._archive_page(url)
+        except CronetError as error:
+            raise ArchiveTodayError(error) from error

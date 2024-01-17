@@ -7,8 +7,14 @@ import enlighten
 from bookmarkmgr.asyncio import ForgivingTaskGroup
 from bookmarkmgr.checks.broken_link import check_is_link_broken, LinkStatus
 from bookmarkmgr.checks.duplicate_link import DuplicateLinkChecker
-from bookmarkmgr.clients.archive_today import ArchiveTodayClient
-from bookmarkmgr.clients.wayback_machine import WaybackMachineClient
+from bookmarkmgr.clients.archive_today import (
+    ArchiveTodayClient,
+    ArchiveTodayError,
+)
+from bookmarkmgr.clients.wayback_machine import (
+    WaybackMachineClient,
+    WaybackMachineError,
+)
 from bookmarkmgr.cronet import PerHostnameRateLimitedSession
 from bookmarkmgr.logging import get_logger
 from bookmarkmgr.utils.link_metadata import (
@@ -74,7 +80,11 @@ async def process_archival_result(
     service_initials,
     service_name,
 ):
-    archival_url, error = await result_future
+    try:
+        archival_url, error = await result_future
+    except (ArchiveTodayError, WaybackMachineError) as error:
+        logger.error(error)
+        return
 
     if error is None:
         metadata[f"Archive ({service_initials})"] = f"[link]({archival_url})"
