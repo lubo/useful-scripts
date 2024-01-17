@@ -4,12 +4,17 @@ import argparse
 import asyncio
 from getpass import getpass
 import logging
+import signal
 import sys
 
 from . import DEBUG
 from .clients.raindrop import RaindropClient
 from .commands.export_collection import export_collection
 from .commands.maintain_collection import maintain_collection
+
+
+def _sigint_handler(signum, frame):  # noqa: ARG001
+    sys.exit(130)
 
 
 def _host_rate_limits_parser():
@@ -45,6 +50,8 @@ async def run_command(args, raindrop_api_key):
 
 
 def main():
+    signal.signal(signal.SIGINT, _sigint_handler)
+
     logging.basicConfig(
         format=f"%(asctime)s:{logging.BASIC_FORMAT}",
         level=logging.WARNING if DEBUG else logging.ERROR,
