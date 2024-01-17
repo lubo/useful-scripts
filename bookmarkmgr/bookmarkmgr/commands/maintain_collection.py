@@ -50,11 +50,11 @@ async def get_progress_bar(manager, description, **kwargs):
             await asyncio.sleep(1)
 
     refresh_task = asyncio.create_task(refresh())
-
-    yield progress_bar
-
-    stop_refreshing = True
-    await refresh_task
+    try:
+        yield progress_bar
+    finally:
+        stop_refreshing = True
+        await refresh_task
 
 
 class DefaultsDict(dict):
