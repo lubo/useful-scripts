@@ -67,17 +67,14 @@ class DefaultsDict(dict):
         return self._defaults[key]
 
 
-def process_archival_result(
-    task,
+async def process_archival_result(
+    result_future,
     raindrop,
     metadata,
     service_initials,
     service_name,
 ):
-    if task is None or task.exception() is not None:
-        return
-
-    archival_url, error = task.result()
+    archival_url, error = await result_future
 
     if error is None:
         metadata[f"Archive ({service_initials})"] = f"[link]({archival_url})"
@@ -126,11 +123,13 @@ def add_or_remove_tag(raindrop, add_tag, tag, error=None):
     raindrop["tags"] = [*raindrop["tags"], tag]
 
 
-def process_check_broken_result(task, raindrop, metadata, today):
-    if task is None or task.exception() is not None:
-        return
-
-    link_status, error, fixed_url = task.result()
+async def process_check_broken_result(
+    result_future,
+    raindrop,
+    metadata,
+    today,
+):
+    link_status, error, fixed_url = await result_future
     metadata["Last check"] = str(today)
 
     if link_status in BROKEN_LINK_STATUSES:
@@ -165,18 +164,15 @@ def process_check_broken_result(task, raindrop, metadata, today):
         )
 
 
-def process_check_duplicate_result(task, raindrop):
-    if task is None or task.exception() is not None:
-        return
-
+async def process_check_duplicate_result(result_future, raindrop):
     add_or_remove_tag(
         raindrop,
-        task.result(),
+        await result_future,
         "duplicate",
     )
 
 
-async def maintain_raindrop(  # noqa: PLR0913
+async def maintain_raindrop(  # noqa: C901, PLR0913
     raindrop_client,
     raindrop,
     at_client,
@@ -197,6 +193,7 @@ async def maintain_raindrop(  # noqa: PLR0913
     note_metadata = metadata_from_note(raindrop["note"])
     task_group_error = None
     today = datetime.now(tz=timezone.utc)
+    updated_raindrop = DefaultsDict(defaults=raindrop)
 
     try:
         last_check = datetime.fromisoformat(
@@ -209,89 +206,73 @@ async def maintain_raindrop(  # noqa: PLR0913
 
     try:
         async with ForgivingTaskGroup() as task_group:
-            at_archival_task = (
-                None
-                if no_archive
+            if not (
+                no_archive
                 or (no_archive_broken and is_link_broken)
                 or note_metadata.get("Archive (AT)")
                 or note_metadata.get("Archival Error (AT)")
-                else task_group.create_task(
-                    at_client.archive_page(link),
-                    name=f"Archive-Today-Archive-{link}",
+            ):
+                task_group.create_task(
+                    process_archival_result(
+                        at_client.archive_page(link),
+                        updated_raindrop,
+                        note_metadata,
+                        "AT",
+                        "archive.today",
+                    ),
+                    name=f"Archive-Today-{link}",
                 )
-            )
 
-            wm_archival_task = (
-                None
-                if no_archive
+            if not (
+                no_archive
                 or (no_archive_broken and is_link_broken)
                 or note_metadata.get("Archive (WM)")
                 or note_metadata.get("Archival Error (WM)")
-                else task_group.create_task(
-                    wm_client.archive_page(link),
-                    name=f"Wayback-Machine-Archive-{link}",
+            ):
+                task_group.create_task(
+                    process_archival_result(
+                        wm_client.archive_page(link),
+                        updated_raindrop,
+                        note_metadata,
+                        "WM",
+                        "Wayback Machine",
+                    ),
+                    name=f"Wayback-Machine-{link}",
                 )
-            )
 
-            check_broken_task = (
-                None
-                if no_checks
+            if not (
+                no_checks
                 or "broken" in raindrop["tags"]
                 or (
                     "possibly-broken" not in raindrop["tags"]
                     and today < last_check + timedelta(days=1)
                 )
-                else task_group.create_task(
-                    check_is_link_broken(
-                        check_session,
-                        link,
+            ):
+                task_group.create_task(
+                    process_check_broken_result(
+                        check_is_link_broken(
+                            check_session,
+                            link,
+                        ),
+                        updated_raindrop,
+                        note_metadata,
+                        today,
                     ),
                     name=f"Check-If-Broken-{link}",
                 )
-            )
 
-            check_duplicate_task = (
-                None
-                if no_checks
-                else task_group.create_task(
-                    duplicate_checker.is_link_duplicate(raindrop),
+            if not no_checks:
+                task_group.create_task(
+                    process_check_duplicate_result(
+                        duplicate_checker.is_link_duplicate(raindrop),
+                        updated_raindrop,
+                    ),
                     name=f"Check-Is-Duplicate-{link}",
                 )
-            )
     except ExceptionGroup as error:
         task_group_error = error
 
     try:
-        updated_raindrop = DefaultsDict(defaults=raindrop)
-
-        process_archival_result(
-            at_archival_task,
-            updated_raindrop,
-            note_metadata,
-            "AT",
-            "archive.today",
-        )
-
-        process_archival_result(
-            wm_archival_task,
-            updated_raindrop,
-            note_metadata,
-            "WM",
-            "Wayback Machine",
-        )
-
-        process_check_broken_result(
-            check_broken_task,
-            updated_raindrop,
-            note_metadata,
-            today,
-        )
-
-        process_check_duplicate_result(
-            check_duplicate_task,
-            updated_raindrop,
-        )
-
         if raindrop["note"] != (new_note := metadata_to_note(note_metadata)):
             updated_raindrop["note"] = new_note
 
