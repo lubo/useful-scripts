@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /bookmarkmgr
+    schedule:
+      interval: daily
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+  - package-ecosystem: pip
+    directory: /bookmarks4diff
+    schedule:
+      interval: daily
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+  - package-ecosystem: pip
+    directory: /ytm
+    schedule:
+      interval: daily
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
