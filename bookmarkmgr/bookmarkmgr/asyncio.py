@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 from .logging import get_logger
 
@@ -39,12 +40,13 @@ class RateLimiter:
         await self._semaphore.acquire()
 
     async def __aexit__(self, exc_type, exc, tb):
-        task = asyncio.create_task(self._release())
+        task = asyncio.create_task(self._release(self.period + time.time()))
         self._release_tasks.add(task)
         task.add_done_callback(self._release_task_done)
 
-    async def _release(self):
-        await asyncio.sleep(self.period)
+    async def _release(self, at):
+        if (remaining := at - time.time()) > 0:
+            await asyncio.sleep(remaining)
 
         self._semaphore.release()
 
