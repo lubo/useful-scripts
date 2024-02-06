@@ -17,7 +17,7 @@ sys.path.append(
     str(Path(__file__).resolve().parent.parent.parent / "bookmarkmgr"),
 )
 
-from bookmarkmgr.utils.link_metadata import metadata_from_note  # noqa: E402
+from bookmarkmgr.utils.link_metadata import metadata_from_note
 
 
 class Parser(HTMLParser):
