@@ -1,11 +1,11 @@
-import asyncio
+from collections.abc import Awaitable
 from enum import IntEnum, unique
-from html.parser import HTMLParser
 from http import HTTPStatus
 import re
 from urllib.parse import urlparse
 
-from bookmarkmgr.cronet import RequestError
+from bookmarkmgr.cronet import RequestError, Response
+from bookmarkmgr.scraper import HTMLScraper
 
 REDIRECT_STATUS_CODES = {
     HTTPStatus.MOVED_PERMANENTLY.value,
@@ -19,12 +19,6 @@ NOT_FOUND_STATUS_CODES = {
     HTTPStatus.GONE.value,
 }
 
-INVALID_HTML_PARENTS = {
-    "base",
-    "link",
-    "meta",
-}
-
 
 @unique
 class LinkStatus(IntEnum):
@@ -34,67 +28,19 @@ class LinkStatus(IntEnum):
     BLOCKED = 4
 
 
-class _HTMLParser(HTMLParser):
-    def reset(self, *args, **kwargs):
-        self._path = []
-        self.body_text = ""
-        self.title = ""
-
-        return super().reset(*args, **kwargs)
-
-    def handle_starttag(
-        self,
-        tag,
-        attrs,  # noqa: ARG002
-    ):
-        if tag not in INVALID_HTML_PARENTS:
-            self._path.append(tag)
-
-    def handle_endtag(self, tag):
-        if len(self._path) > 0 and self._path[-1] == tag:
-            self._path.pop()
-
-    def handle_data(self, data):
-        match self._path:
-            case ["html", "body"]:
-                self.body_text = data.strip()
-            case ["html", "head", "title"]:
-                self.title = data.strip()
-
-
-async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
-    html_parser = None
-
-    async def retry_predicate(response):
-        if response.status_code != HTTPStatus.OK.value:
-            return False
-
-        nonlocal html_parser
-
-        if html_parser is None:
-            html_parser = _HTMLParser()
-        else:
-            html_parser.reset()
-
-        await asyncio.to_thread(html_parser.feed, response.text)
-
-        return html_parser.body_text == "Loading..."  # Rate limit hit
-
+async def check_link_status(
+    get_page_awaitable: Awaitable[tuple[HTMLScraper, Response]],
+) -> tuple[LinkStatus, None | str]:
     link_status = LinkStatus.OK
     error = None
-    fixed_url = None
 
     try:
-        response = await session.get(
-            url,
-            allow_redirects=False,
-            retry_predicate=retry_predicate,
-        )
+        html_parser, response = await get_page_awaitable
     except RequestError as e:
         link_status = LinkStatus.POSSIBLY_BROKEN
         error = str(e)
 
-        return link_status, error, fixed_url
+        return link_status, error
 
     match response.status_code:
         case 200:
@@ -123,20 +69,24 @@ async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
     if error is not None or (
         response.ok and response.status_code not in REDIRECT_STATUS_CODES
     ):
-        return link_status, error, fixed_url
+        return link_status, error
 
     error = f"{response.status_code} {response.reason}"
 
     if link_status != LinkStatus.OK:
-        return link_status, error, fixed_url
+        return link_status, error
 
     link_status = LinkStatus.POSSIBLY_BROKEN
 
-    if not fix_broken or (
+    return link_status, error
+
+
+def get_fixed_url(response: Response, url: str) -> None | str:
+    if (
         response.status_code
         not in REDIRECT_STATUS_CODES | NOT_FOUND_STATUS_CODES
     ):
-        return link_status, error, fixed_url
+        return None
 
     # Raindrop breaks some links during import by removing trailing slash and
     # by adding trailing slash during new link addition.
@@ -153,17 +103,6 @@ async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
         response.status_code in REDIRECT_STATUS_CODES
         and response.redirect_url != potentially_fixed_url
     ):
-        return link_status, error, fixed_url
+        return None
 
-    new_link_status, new_error, _ = await check_is_link_broken(
-        session,
-        potentially_fixed_url,
-        fix_broken=False,
-    )
-
-    if new_link_status == LinkStatus.OK:
-        link_status = new_link_status
-        error = new_error
-        fixed_url = potentially_fixed_url
-
-    return link_status, error, fixed_url
+    return potentially_fixed_url

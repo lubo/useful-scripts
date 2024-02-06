@@ -4,9 +4,14 @@ from datetime import datetime, timedelta, UTC
 
 import enlighten
 
+from bookmarkmgr import cronet, scraper
 from bookmarkmgr.asyncio import ForgivingTaskGroup
-from bookmarkmgr.checks.broken_link import check_is_link_broken, LinkStatus
 from bookmarkmgr.checks.duplicate_link import DuplicateLinkChecker
+from bookmarkmgr.checks.link_status import (
+    check_link_status,
+    get_fixed_url,
+    LinkStatus,
+)
 from bookmarkmgr.clients.archive_today import (
     ArchiveTodayClient,
     ArchiveTodayError,
@@ -133,13 +138,42 @@ def add_or_remove_tag(raindrop, add_tag, tag, error=None):
     raindrop["tags"] = [*raindrop["tags"], tag]
 
 
-async def process_check_broken_result(
+async def scrape_and_check(session, url):
+    html = None
+    response = None
+
+    async def scrape(url: str) -> tuple[scraper.HTMLScraper, cronet.Response]:
+        nonlocal html, response
+
+        html, response = await scraper.get_page(session, url)
+
+        return html, response
+
+    link_status, error = await check_link_status(scrape(url))
+
+    if response is None or (fixed_url := get_fixed_url(response, url)) is None:
+        return html, link_status, error, None
+
+    old_html = html
+
+    fixed_link_status, fixed_error = await check_link_status(
+        scrape(fixed_url),
+    )
+
+    if fixed_link_status == LinkStatus.OK:
+        return html, fixed_link_status, fixed_error, fixed_url
+
+    return old_html, link_status, error, None
+
+
+async def process_scrape_and_check_result(
     result_future,
     raindrop,
     metadata,
     today,
 ):
-    link_status, error, fixed_url = await result_future
+    html, link_status, error, fixed_url = await result_future
+
     metadata["Last check"] = str(today)
 
     if link_status in BROKEN_LINK_STATUSES:
@@ -257,16 +291,13 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
                 )
             ):
                 task_group.create_task(
-                    process_check_broken_result(
-                        check_is_link_broken(
-                            check_session,
-                            link,
-                        ),
+                    process_scrape_and_check_result(
+                        scrape_and_check(check_session, link),
                         updated_raindrop,
                         note_metadata,
                         today,
                     ),
-                    name=f"Check-If-Broken-{link}",
+                    name=f"Scrape-And-Check-{link}",
                 )
 
             if not no_checks:
