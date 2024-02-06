@@ -173,8 +173,24 @@ async def process_scrape_and_check_result(
     today,
 ):
     html, link_status, error, fixed_url = await result_future
+    url = raindrop["link"]
 
     metadata["Last check"] = str(today)
+
+    if link_status == LinkStatus.OK:
+        canonical_url = next(
+            filter(
+                bool,
+                [
+                    html.default_lang_url,
+                    html.canonical_url,
+                    html.og_url,
+                ],
+            ),
+            None,
+        )
+        if canonical_url and canonical_url != url:
+            metadata["Canonical URL"] = canonical_url
 
     if link_status in BROKEN_LINK_STATUSES:
         try:
@@ -244,7 +260,11 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
     except (ValueError, TypeError):
         last_check = datetime.fromtimestamp(0, tz=UTC)
 
-    duplicate_checker.add_link(raindrop)
+    canonical_url_raindrop = {
+        **raindrop,
+        "link": note_metadata.get("Canonical URL") or link,
+    }
+    duplicate_checker.add_link(canonical_url_raindrop)
 
     try:
         async with ForgivingTaskGroup() as task_group:
@@ -303,7 +323,9 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
             if not no_checks:
                 task_group.create_task(
                     process_check_duplicate_result(
-                        duplicate_checker.is_link_duplicate(raindrop),
+                        duplicate_checker.is_link_duplicate(
+                            canonical_url_raindrop,
+                        ),
                         updated_raindrop,
                     ),
                     name=f"Check-Is-Duplicate-{link}",

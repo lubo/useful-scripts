@@ -15,9 +15,32 @@ class HTMLScraper(HTMLParser):
     def reset(self, *args, **kwargs):
         self._path = []
         self.body_text = ""
+        self.canonical_url = None
+        self.default_lang_url = None
+        self.og_url = None
         self.title = ""
 
         return super().reset(*args, **kwargs)
+
+    def _handle_selfclosingtag(self, tag, attrs):
+        if self._path != ["html", "head"]:
+            return
+
+        attrs = {key: value for key, value in attrs}  # noqa: C416
+
+        match tag:
+            case "link":
+                match attrs.get("rel"):
+                    case "alternate":
+                        match attrs.get("hreflang"):
+                            case "x-default":
+                                self.default_lang_url = attrs.get("href")
+                    case "canonical":
+                        self.canonical_url = attrs.get("href")
+            case "meta":
+                match attrs.get("property"):
+                    case "og:url":
+                        self.og_url = attrs.get("content")
 
     def handle_data(self, data):
         match self._path:
@@ -30,11 +53,16 @@ class HTMLScraper(HTMLParser):
         if len(self._path) > 0 and self._path[-1] == tag:
             del self._path[-1]
 
+    def handle_startendtag(self, tag, attrs):
+        self._handle_selfclosingtag(tag, attrs)
+
     def handle_starttag(
         self,
         tag,
-        attrs,  # noqa: ARG002
+        attrs,
     ):
+        self._handle_selfclosingtag(tag, attrs)
+
         if tag not in INVALID_HTML_PARENTS:
             self._path.append(tag)
 
