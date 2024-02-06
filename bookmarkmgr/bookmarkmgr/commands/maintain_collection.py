@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 
 import enlighten
 
@@ -147,7 +147,7 @@ async def process_check_broken_result(
             try:
                 broken_since = datetime.fromisoformat(
                     metadata.get("Broken since"),
-                ).replace(tzinfo=timezone.utc)
+                ).replace(tzinfo=UTC)
             except (ValueError, TypeError):
                 broken_since = today
                 metadata["Broken since"] = str(broken_since)
@@ -202,15 +202,15 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
     link = raindrop["link"]
     note_metadata = metadata_from_note(raindrop["note"])
     task_group_error = None
-    today = datetime.now(tz=timezone.utc)
+    today = datetime.now(tz=UTC)
     updated_raindrop = DefaultsDict(defaults=raindrop)
 
     try:
         last_check = datetime.fromisoformat(
             note_metadata.get("Last check"),
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
     except (ValueError, TypeError):
-        last_check = datetime.fromtimestamp(0, tz=timezone.utc)
+        last_check = datetime.fromtimestamp(0, tz=UTC)
 
     duplicate_checker.add_link(raindrop)
 
