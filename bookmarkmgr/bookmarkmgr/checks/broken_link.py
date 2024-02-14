@@ -155,13 +155,15 @@ async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
     ):
         return link_status, error, fixed_url
 
-    new_link_status, _, _ = await check_is_link_broken(
+    new_link_status, new_error, _ = await check_is_link_broken(
         session,
         potentially_fixed_url,
         fix_broken=False,
     )
 
     if new_link_status == LinkStatus.OK:
+        link_status = new_link_status
+        error = new_error
         fixed_url = potentially_fixed_url
 
     return link_status, error, fixed_url

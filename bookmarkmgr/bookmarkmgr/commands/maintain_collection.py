@@ -143,27 +143,25 @@ async def process_check_broken_result(
     metadata["Last check"] = str(today)
 
     if link_status in BROKEN_LINK_STATUSES:
-        if fixed_url is None:
-            try:
-                broken_since = datetime.fromisoformat(
-                    metadata.get("Broken since"),
-                ).replace(tzinfo=UTC)
-            except (ValueError, TypeError):
-                broken_since = today
-                metadata["Broken since"] = str(broken_since)
+        try:
+            broken_since = datetime.fromisoformat(
+                metadata.get("Broken since"),
+            ).replace(tzinfo=UTC)
+        except (ValueError, TypeError):
+            broken_since = today
+            metadata["Broken since"] = str(broken_since)
 
-            if link_status == LinkStatus.POSSIBLY_BROKEN and (
-                today >= broken_since + timedelta(days=7)
-            ):
-                link_status = LinkStatus.BROKEN
-        else:
-            logger.info("Fixing URL to %s", fixed_url)
+        if link_status == LinkStatus.POSSIBLY_BROKEN and (
+            today >= broken_since + timedelta(days=7)
+        ):
+            link_status = LinkStatus.BROKEN
+    else:
+        metadata.pop("Broken since", None)
 
-            link_status = LinkStatus.OK
-            raindrop["link"] = fixed_url
+    if fixed_url is not None:
+        logger.info("Fixing URL to %s", fixed_url)
 
-    if link_status not in BROKEN_LINK_STATUSES and "Broken since" in metadata:
-        del metadata["Broken since"]
+        raindrop["link"] = fixed_url
 
     for status, tag in LINK_STATUS_TAGS.items():
         add_or_remove_tag(
