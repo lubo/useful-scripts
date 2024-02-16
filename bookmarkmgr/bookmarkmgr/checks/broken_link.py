@@ -90,9 +90,9 @@ async def check_is_link_broken(session, url, *, fix_broken=True):  # noqa: C901
             allow_redirects=False,
             retry_predicate=retry_predicate,
         )
-    except RequestError as error:
+    except RequestError as e:
         link_status = LinkStatus.POSSIBLY_BROKEN
-        error = str(error)
+        error = str(e)
 
         return link_status, error, fixed_url
 
