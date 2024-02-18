@@ -1,6 +1,6 @@
 from asyncio import Event
 from datetime import datetime
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse
 
 
 class _Link:
@@ -77,3 +77,34 @@ class DuplicateLinkChecker:
                 self._original_links[queryless_url] = link
 
         self._all_links_received.set()
+
+
+def get_canonical_url(html, url):
+    canonical_url = next(
+        filter(
+            bool,
+            [
+                html.default_lang_url,
+                html.canonical_url,
+                html.og_url,
+            ],
+        ),
+        None,
+    )
+
+    if not canonical_url or canonical_url == url:
+        return None
+
+    parsed_canonical_url = urlparse(canonical_url)
+    parsed_url = urlparse(url)
+
+    canonical_url_qp = parse_qsl(parsed_canonical_url.query)
+    url_qp = parse_qsl(parsed_url.query)
+
+    common_qp = set(canonical_url_qp) & set(url_qp)
+
+    return parsed_canonical_url._replace(
+        query=urlencode(
+            [param for param in canonical_url_qp if param in common_qp],
+        ),
+    ).geturl()

@@ -6,7 +6,10 @@ import enlighten
 
 from bookmarkmgr import cronet, scraper
 from bookmarkmgr.asyncio import ForgivingTaskGroup
-from bookmarkmgr.checks.duplicate_link import DuplicateLinkChecker
+from bookmarkmgr.checks.duplicate_link import (
+    DuplicateLinkChecker,
+    get_canonical_url,
+)
 from bookmarkmgr.checks.link_status import (
     check_link_status,
     get_fixed_url,
@@ -177,19 +180,13 @@ async def process_scrape_and_check_result(
 
     metadata["Last check"] = str(today)
 
-    if link_status == LinkStatus.OK:
-        canonical_url = next(
-            filter(
-                bool,
-                [
-                    html.default_lang_url,
-                    html.canonical_url,
-                    html.og_url,
-                ],
-            ),
-            None,
-        )
-        if canonical_url and canonical_url != url:
+    if link_status == LinkStatus.OK:  # noqa: SIM102
+        if (
+            canonical_url := get_canonical_url(
+                html,
+                metadata.get("Canonical URL") or url,
+            )
+        ) is not None:
             metadata["Canonical URL"] = canonical_url
 
     if link_status in BROKEN_LINK_STATUSES:
