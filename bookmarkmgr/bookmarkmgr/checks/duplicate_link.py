@@ -104,6 +104,13 @@ def get_canonical_url(html, url):
     common_qp = set(canonical_url_qp) & set(url_qp)
 
     return parsed_canonical_url._replace(
+        netloc=(
+            parsed_url.netloc
+            if parsed_canonical_url.hostname.endswith(
+                f".{parsed_url.hostname}",
+            )
+            else parsed_canonical_url.netloc
+        ),
         query=urlencode(
             [param for param in canonical_url_qp if param in common_qp],
         ),
