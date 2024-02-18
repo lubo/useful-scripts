@@ -42,10 +42,7 @@ async def run_command(args, raindrop_api_key):
                 await maintain_collection(
                     raindrop_client,
                     args.collection_id,
-                    args.host_rate_limits,
-                    args.no_archive,
-                    args.no_archive_broken,
-                    args.no_checks,
+                    args,
                 )
 
 

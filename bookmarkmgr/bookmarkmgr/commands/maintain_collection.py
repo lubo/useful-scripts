@@ -236,9 +236,7 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
     wm_client,
     check_session,
     duplicate_checker,
-    no_archive,
-    no_archive_broken,
-    no_checks,
+    user_options,
 ):
     is_link_broken = (
         len(
@@ -268,8 +266,8 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
     try:
         async with ForgivingTaskGroup() as task_group:
             if not (
-                no_archive
-                or (no_archive_broken and is_link_broken)
+                user_options.no_archive
+                or (user_options.no_archive_broken and is_link_broken)
                 or note_metadata.get("Archive (AT)")
                 or note_metadata.get("Archival Error (AT)")
             ):
@@ -285,8 +283,8 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
                 )
 
             if not (
-                no_archive
-                or (no_archive_broken and is_link_broken)
+                user_options.no_archive
+                or (user_options.no_archive_broken and is_link_broken)
                 or note_metadata.get("Archive (WM)")
                 or note_metadata.get("Archival Error (WM)")
             ):
@@ -302,7 +300,7 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
                 )
 
             if not (
-                no_checks
+                user_options.no_checks
                 or "broken" in raindrop["tags"]
                 or (
                     "possibly-broken" not in raindrop["tags"]
@@ -319,7 +317,7 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
                     name=f"Scrape-And-Check-{link}",
                 )
 
-            if not no_checks:
+            if not user_options.no_checks:
                 task_group.create_task(
                     process_check_duplicate_result(
                         duplicate_checker.is_link_duplicate(
@@ -353,13 +351,10 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
             raise task_group_error
 
 
-async def maintain_collection(  # noqa: PLR0913
+async def maintain_collection(
     raindrop_client,
     collection_id,
-    host_rate_limits,
-    no_archive,
-    no_archive_broken,
-    no_checks,
+    user_options,
 ):
     items = raindrop_client.get_collection_items(collection_id)
     duplicate_checker = DuplicateLinkChecker()
@@ -369,7 +364,7 @@ async def maintain_collection(  # noqa: PLR0913
         ArchiveTodayClient() as at_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
-            host_rate_limits=host_rate_limits,
+            host_rate_limits=user_options.host_rate_limits,
         ) as check_session,
         get_progress_bar(
             progress_bar_manager,
@@ -399,9 +394,7 @@ async def maintain_collection(  # noqa: PLR0913
                     wm_client,
                     check_session,
                     duplicate_checker,
-                    no_archive,
-                    no_archive_broken,
-                    no_checks,
+                    user_options,
                 ),
                 name=f"Maintain-{item['link']}",
             )
