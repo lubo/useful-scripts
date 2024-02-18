@@ -184,7 +184,7 @@ async def process_scrape_and_check_result(
         if (
             canonical_url := get_canonical_url(
                 html,
-                metadata.get("Canonical URL") or url,
+                metadata.get("Canonical URL") or fixed_url or url,
             )
         ) is None:
             metadata.pop("Canonical URL", None)
