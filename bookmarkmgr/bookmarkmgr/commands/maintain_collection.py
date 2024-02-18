@@ -75,10 +75,10 @@ class DefaultsDict(dict):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._defaults = defaults
+        self.defaults = defaults
 
     def __missing__(self, key):
-        return self._defaults[key]
+        return self.defaults[key]
 
 
 async def process_archival_result(
@@ -229,9 +229,10 @@ async def process_check_duplicate_result(result_future, raindrop):
     )
 
 
-async def maintain_raindrop(  # noqa: C901, PLR0913
-    raindrop_client,
+def create_raindrop_maintenance_tasks(  # noqa: PLR0913
+    task_group,
     raindrop,
+    note_metadata,
     at_client,
     wm_client,
     check_session,
@@ -245,10 +246,7 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
         > 0
     )
     link = raindrop["link"]
-    note_metadata = metadata_from_note(raindrop["note"])
-    task_group_error = None
     today = datetime.now(tz=UTC)
-    updated_raindrop = DefaultsDict(defaults=raindrop)
 
     try:
         last_check = datetime.fromisoformat(
@@ -257,76 +255,102 @@ async def maintain_raindrop(  # noqa: C901, PLR0913
     except (ValueError, TypeError):
         last_check = datetime.fromtimestamp(0, tz=UTC)
 
-    canonical_url_raindrop = {
-        **raindrop,
-        "link": note_metadata.get("Canonical URL") or link,
-    }
-    duplicate_checker.add_link(canonical_url_raindrop)
+    if not (
+        user_options.no_archive
+        or (user_options.no_archive_broken and is_link_broken)
+        or note_metadata.get("Archive (AT)")
+        or note_metadata.get("Archival Error (AT)")
+    ):
+        task_group.create_task(
+            process_archival_result(
+                at_client.archive_page(link),
+                raindrop,
+                note_metadata,
+                "AT",
+                "archive.today",
+            ),
+            name=f"Archive-Today-{link}",
+        )
+
+    if not (
+        user_options.no_archive
+        or (user_options.no_archive_broken and is_link_broken)
+        or note_metadata.get("Archive (WM)")
+        or note_metadata.get("Archival Error (WM)")
+    ):
+        task_group.create_task(
+            process_archival_result(
+                wm_client.archive_page(link),
+                raindrop,
+                note_metadata,
+                "WM",
+                "Wayback Machine",
+            ),
+            name=f"Wayback-Machine-{link}",
+        )
+
+    if not (
+        user_options.no_checks
+        or "broken" in raindrop["tags"]
+        or (
+            "possibly-broken" not in raindrop["tags"]
+            and today < last_check + timedelta(days=1)
+        )
+    ):
+        task_group.create_task(
+            process_scrape_and_check_result(
+                scrape_and_check(check_session, link),
+                raindrop,
+                note_metadata,
+                today,
+            ),
+            name=f"Scrape-And-Check-{link}",
+        )
+
+    if not user_options.no_checks:
+        canonical_url_raindrop = {
+            **raindrop.defaults,
+            "link": note_metadata.get("Canonical URL") or link,
+        }
+
+        duplicate_checker.add_link(canonical_url_raindrop)
+
+        task_group.create_task(
+            process_check_duplicate_result(
+                duplicate_checker.is_link_duplicate(
+                    canonical_url_raindrop,
+                ),
+                raindrop,
+            ),
+            name=f"Check-Is-Duplicate-{link}",
+        )
+
+
+async def maintain_raindrop(  # noqa: PLR0913
+    raindrop_client,
+    raindrop,
+    at_client,
+    wm_client,
+    check_session,
+    duplicate_checker,
+    user_options,
+):
+    note_metadata = metadata_from_note(raindrop["note"])
+    task_group_error = None
+    updated_raindrop = DefaultsDict(defaults=raindrop)
 
     try:
         async with ForgivingTaskGroup() as task_group:
-            if not (
-                user_options.no_archive
-                or (user_options.no_archive_broken and is_link_broken)
-                or note_metadata.get("Archive (AT)")
-                or note_metadata.get("Archival Error (AT)")
-            ):
-                task_group.create_task(
-                    process_archival_result(
-                        at_client.archive_page(link),
-                        updated_raindrop,
-                        note_metadata,
-                        "AT",
-                        "archive.today",
-                    ),
-                    name=f"Archive-Today-{link}",
-                )
-
-            if not (
-                user_options.no_archive
-                or (user_options.no_archive_broken and is_link_broken)
-                or note_metadata.get("Archive (WM)")
-                or note_metadata.get("Archival Error (WM)")
-            ):
-                task_group.create_task(
-                    process_archival_result(
-                        wm_client.archive_page(link),
-                        updated_raindrop,
-                        note_metadata,
-                        "WM",
-                        "Wayback Machine",
-                    ),
-                    name=f"Wayback-Machine-{link}",
-                )
-
-            if not (
-                user_options.no_checks
-                or "broken" in raindrop["tags"]
-                or (
-                    "possibly-broken" not in raindrop["tags"]
-                    and today < last_check + timedelta(days=1)
-                )
-            ):
-                task_group.create_task(
-                    process_scrape_and_check_result(
-                        scrape_and_check(check_session, link),
-                        updated_raindrop,
-                        note_metadata,
-                        today,
-                    ),
-                    name=f"Scrape-And-Check-{link}",
-                )
-
-            if not user_options.no_checks:
-                task_group.create_task(
-                    process_check_duplicate_result(
-                        duplicate_checker.is_link_duplicate(
-                            canonical_url_raindrop,
-                        ),
-                        updated_raindrop,
-                    ),
-                    name=f"Check-Is-Duplicate-{link}",
-                )
+            create_raindrop_maintenance_tasks(
+                task_group,
+                updated_raindrop,
+                note_metadata,
+                at_client,
+                wm_client,
+                check_session,
+                duplicate_checker,
+                user_options,
+            )
     except ExceptionGroup as error:
         task_group_error = error
 
