@@ -180,13 +180,15 @@ async def process_scrape_and_check_result(
 
     metadata["Last check"] = str(today)
 
-    if link_status == LinkStatus.OK:  # noqa: SIM102
+    if link_status == LinkStatus.OK:
         if (
             canonical_url := get_canonical_url(
                 html,
                 metadata.get("Canonical URL") or url,
             )
-        ) is not None:
+        ) is None:
+            metadata.pop("Canonical URL", None)
+        else:
             metadata["Canonical URL"] = canonical_url
 
     if link_status in BROKEN_LINK_STATUSES:
