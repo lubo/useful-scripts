@@ -1,6 +1,8 @@
 import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, UTC
+from functools import partial
 
 import enlighten
 
@@ -114,6 +116,64 @@ async def process_archival_result(
     raindrop["tags"] = [*raindrop["tags"], tag]
 
 
+def create_archival_tasks(  # noqa: PLR0913
+    task_group,
+    raindrop,
+    note_metadata,
+    at_client,
+    wm_client,
+    user_options,
+):
+    is_link_broken = (
+        len(
+            {"broken", "possibly-broken"}.intersection(raindrop["tags"]),
+        )
+        > 0
+    )
+    link = raindrop["link"]
+    tasks = []
+
+    if not (
+        user_options.no_archive
+        or (user_options.no_archive_broken and is_link_broken)
+        or note_metadata.get("Archive (AT)")
+        or note_metadata.get("Archival Error (AT)")
+    ):
+        tasks.append(
+            task_group.create_task(
+                process_archival_result(
+                    at_client.archive_page(link),
+                    raindrop,
+                    note_metadata,
+                    "AT",
+                    "archive.today",
+                ),
+                name=f"Archive-Today-{link}",
+            ),
+        )
+
+    if not (
+        user_options.no_archive
+        or (user_options.no_archive_broken and is_link_broken)
+        or note_metadata.get("Archive (WM)")
+        or note_metadata.get("Archival Error (WM)")
+    ):
+        tasks.append(
+            task_group.create_task(
+                process_archival_result(
+                    wm_client.archive_page(link),
+                    raindrop,
+                    note_metadata,
+                    "WM",
+                    "Wayback Machine",
+                ),
+                name=f"Wayback-Machine-{link}",
+            ),
+        )
+
+    return tasks
+
+
 def add_or_remove_tag(raindrop, add_tag, tag, error=None):
     tag_added = tag in raindrop["tags"]
 
@@ -169,11 +229,13 @@ async def scrape_and_check(session, url):
     return old_html, link_status, error, None
 
 
-async def process_scrape_and_check_result(
+async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913
     result_future,
     raindrop,
     metadata,
     today,
+    archival_tasks,
+    create_archival_tasks,
 ):
     html, link_status, error, fixed_url = await result_future
     url = raindrop["link"]
@@ -207,11 +269,6 @@ async def process_scrape_and_check_result(
     else:
         metadata.pop("Broken since", None)
 
-    if fixed_url is not None:
-        logger.info("Fixing URL to %s", fixed_url)
-
-        raindrop["link"] = fixed_url
-
     for status, tag in LINK_STATUS_TAGS.items():
         add_or_remove_tag(
             raindrop,
@@ -219,6 +276,31 @@ async def process_scrape_and_check_result(
             tag,
             error,
         )
+
+    if fixed_url is None:
+        return
+
+    logger.info("Fixing URL to %s", fixed_url)
+
+    raindrop["link"] = fixed_url
+
+    for task in archival_tasks:
+        task.cancel()
+
+    for task in archival_tasks:
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    for key in [
+        "Archive (AT)",
+        "Archival Error (AT)",
+        "Archive (WM)",
+        "Archival Error (WM)",
+    ]:
+        metadata.pop(key, None)
+
+    async with ForgivingTaskGroup() as task_group:
+        create_archival_tasks(task_group)
 
 
 async def process_check_duplicate_result(result_future, raindrop):
@@ -239,11 +321,13 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     duplicate_checker,
     user_options,
 ):
-    is_link_broken = (
-        len(
-            {"broken", "possibly-broken"}.intersection(raindrop["tags"]),
-        )
-        > 0
+    create_archival_tasks_partial = partial(
+        create_archival_tasks,
+        raindrop=raindrop,
+        note_metadata=note_metadata,
+        at_client=at_client,
+        wm_client=wm_client,
+        user_options=user_options,
     )
     link = raindrop["link"]
     today = datetime.now(tz=UTC)
@@ -255,39 +339,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     except (ValueError, TypeError):
         last_check = datetime.fromtimestamp(0, tz=UTC)
 
-    if not (
-        user_options.no_archive
-        or (user_options.no_archive_broken and is_link_broken)
-        or note_metadata.get("Archive (AT)")
-        or note_metadata.get("Archival Error (AT)")
-    ):
-        task_group.create_task(
-            process_archival_result(
-                at_client.archive_page(link),
-                raindrop,
-                note_metadata,
-                "AT",
-                "archive.today",
-            ),
-            name=f"Archive-Today-{link}",
-        )
-
-    if not (
-        user_options.no_archive
-        or (user_options.no_archive_broken and is_link_broken)
-        or note_metadata.get("Archive (WM)")
-        or note_metadata.get("Archival Error (WM)")
-    ):
-        task_group.create_task(
-            process_archival_result(
-                wm_client.archive_page(link),
-                raindrop,
-                note_metadata,
-                "WM",
-                "Wayback Machine",
-            ),
-            name=f"Wayback-Machine-{link}",
-        )
+    archival_tasks = create_archival_tasks_partial(task_group)
 
     if not (
         user_options.no_checks
@@ -303,6 +355,8 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
                 raindrop,
                 note_metadata,
                 today,
+                archival_tasks,
+                create_archival_tasks_partial,
             ),
             name=f"Scrape-And-Check-{link}",
         )
