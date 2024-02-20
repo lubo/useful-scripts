@@ -20,15 +20,14 @@ sys.path.append(
 from bookmarkmgr.utils.link_metadata import metadata_from_note
 
 
-class Parser(HTMLParser):
-    def reset(self, *args, **kwargs):
-        self._tag = None
-        self.items = []
+def parse_bookmarks(html):
+    current_tag = None
+    items = []
 
-        return super().reset(*args, **kwargs)
+    def handle_starttag(tag, attrs):
+        nonlocal current_tag
 
-    def handle_starttag(self, tag, attrs):
-        self._tag = tag
+        current_tag = tag
 
         if tag != "a":
             return
@@ -49,15 +48,15 @@ class Parser(HTMLParser):
 
             item[name] = value
 
-        self.items.append(item)
+        items.append(item)
 
-    def handle_data(self, data):
-        if not self.items or not (data := data.strip()):
+    def handle_data(data):
+        if not items or not (data := data.strip()):
             return
 
-        item = self.items[-1]
+        item = items[-1]
 
-        match self._tag:
+        match current_tag:
             case "a":
                 item["title"] = data
             case "dd":
@@ -67,19 +66,26 @@ class Parser(HTMLParser):
                     if key != "Last check"
                 }
 
+    html_parser = HTMLParser()
+    html_parser.handle_data = handle_data
+    html_parser.handle_starttag = handle_starttag
+
+    html_parser.feed(html)
+
+    return items
+
 
 def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("file", type=argparse.FileType("r"))
     args = arg_parser.parse_args()
 
-    html_parser = Parser()
     with args.file:
-        html_parser.feed(args.file.read())
+        items = parse_bookmarks(args.file.read())
 
     print(  # noqa: T201
         yaml.dump(
-            html_parser.items,
+            items,
             allow_unicode=True,
             default_flow_style=False,
             Dumper=YamlSafeDumper,
