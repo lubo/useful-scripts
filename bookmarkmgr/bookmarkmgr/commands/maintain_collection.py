@@ -242,16 +242,22 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913
 
     metadata["Last check"] = str(today)
 
-    if link_status == LinkStatus.OK:
+    if fixed_url is not None:
+        logger.info("Fixing URL to %s", fixed_url)
+
+        raindrop["link"] = url = fixed_url
+
+    if link_status == LinkStatus.OK:  # noqa: SIM102
         if (
             canonical_url := get_canonical_url(
                 html,
-                metadata.get("Canonical URL") or fixed_url or url,
+                metadata.get("Canonical URL") or url,
             )
-        ) is None:
-            metadata.pop("Canonical URL", None)
-        else:
-            metadata["Canonical URL"] = canonical_url
+        ) is not None:
+            if canonical_url == url:
+                metadata.pop("Canonical URL", None)
+            else:
+                metadata["Canonical URL"] = canonical_url
 
     if link_status in BROKEN_LINK_STATUSES:
         try:
@@ -279,10 +285,6 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913
 
     if fixed_url is None:
         return
-
-    logger.info("Fixing URL to %s", fixed_url)
-
-    raindrop["link"] = fixed_url
 
     for task in archival_tasks:
         task.cancel()

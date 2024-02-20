@@ -92,7 +92,7 @@ def get_canonical_url(html, url):
         None,
     )
 
-    if not canonical_url or canonical_url == url:
+    if not canonical_url:
         return None
 
     parsed_canonical_url = urlparse(canonical_url)
