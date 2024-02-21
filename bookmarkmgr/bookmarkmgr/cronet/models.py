@@ -3,22 +3,22 @@ from email.message import Message
 from http import HTTPStatus
 
 
-@dataclass
+@dataclass(slots=True)
 class RequestParameters:
     method: str
     url: str
     allow_redirects: bool = True
 
 
-@dataclass
+@dataclass(slots=True)
 class Response:
     url: str
-    charset = "utf-8"
-    content = b""
+    charset: str = "utf-8"
+    content: bytes = b""
     headers: Message = field(default_factory=Message)
-    reason = ""
-    redirect_url = ""
-    status_code = None
+    reason: str = ""
+    redirect_url: str = ""
+    status_code: int = None
 
     @property
     def ok(self):
