@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from html.parser import HTMLParser
 from http import HTTPStatus
 
@@ -11,19 +12,21 @@ INVALID_HTML_PARENTS = {
 }
 
 
-class HTMLScraper(HTMLParser):
-    def reset(self, *args, **kwargs):
-        self._path = []
-        self.body_text = ""
-        self.canonical_url = None
-        self.default_lang_url = None
-        self.og_url = None
-        self.title = ""
+@dataclass(slots=True)
+class Page:
+    body_text: str = ""
+    canonical_url: str | None = None
+    default_lang_url: str | None = None
+    og_url: str | None = None
+    title: str = ""
 
-        return super().reset(*args, **kwargs)
 
-    def _handle_selfclosingtag(self, tag, attrs):
-        if self._path != ["html", "head"]:
+def _scrape_html(html: str) -> Page:  # noqa: C901
+    page = Page()
+    path: list[str] = []
+
+    def handle_selfclosingtag(tag, attrs):
+        if path != ["html", "head"]:
             return
 
         attrs = {key: value for key, value in attrs}  # noqa: C416
@@ -34,59 +37,60 @@ class HTMLScraper(HTMLParser):
                     case "alternate":
                         match attrs.get("hreflang"):
                             case "x-default":
-                                self.default_lang_url = attrs.get("href")
+                                page.default_lang_url = attrs.get("href")
                     case "canonical":
-                        self.canonical_url = attrs.get("href")
+                        page.canonical_url = attrs.get("href")
             case "meta":
                 match attrs.get("property"):
                     case "og:url":
-                        self.og_url = attrs.get("content")
+                        page.og_url = attrs.get("content")
 
-    def handle_data(self, data):
-        match self._path:
+    def handle_data(data):
+        match path:
             case ["html", "body"]:
-                self.body_text = data.strip()
+                page.body_text = data.strip()
             case ["html", "head", "title"]:
-                self.title = data.strip()
+                page.title = data.strip()
 
-    def handle_endtag(self, tag):
-        if len(self._path) > 0 and self._path[-1] == tag:
-            del self._path[-1]
+    def handle_endtag(tag):
+        if len(path) > 0 and path[-1] == tag:
+            del path[-1]
 
-    def handle_startendtag(self, tag, attrs):
-        self._handle_selfclosingtag(tag, attrs)
+    def handle_startendtag(tag, attrs):
+        handle_selfclosingtag(tag, attrs)
 
-    def handle_starttag(
-        self,
-        tag,
-        attrs,
-    ):
-        self._handle_selfclosingtag(tag, attrs)
+    def handle_starttag(tag, attrs):
+        handle_selfclosingtag(tag, attrs)
 
         if tag not in INVALID_HTML_PARENTS:
-            self._path.append(tag)
+            path.append(tag)
+
+    html_parser = HTMLParser()
+    html_parser.handle_data = handle_data
+    html_parser.handle_endtag = handle_endtag
+    html_parser.handle_startendtag = handle_startendtag
+    html_parser.handle_starttag = handle_starttag
+
+    html_parser.feed(html)
+
+    return page
 
 
 async def get_page(
     session: Session,
     url: str,
-) -> tuple[HTMLScraper | None, Response]:
-    html_parser = None
+) -> tuple[Page | None, Response]:
+    page = None
 
     async def retry_predicate(response):
         if response.status_code != HTTPStatus.OK.value:
             return False
 
-        nonlocal html_parser
+        nonlocal page
 
-        if html_parser is None:
-            html_parser = HTMLScraper()
-        else:
-            html_parser.reset()
+        page = await asyncio.to_thread(_scrape_html, response.text)
 
-        await asyncio.to_thread(html_parser.feed, response.text)
-
-        return html_parser.body_text == "Loading..."  # Rate limit hit
+        return page.body_text == "Loading..."  # Rate limit hit
 
     response = await session.get(
         url,
@@ -94,4 +98,4 @@ async def get_page(
         retry_predicate=retry_predicate,
     )
 
-    return html_parser, response
+    return page, response

@@ -71,4 +71,4 @@ class RateLimiterMixin:
     ):
         super().__init__(*args, **kwargs)
 
-        self._rate_limiter = RateLimiter(rate_limit, rate_limit_period)
+        self.__rate_limiter = RateLimiter(rate_limit, rate_limit_period)

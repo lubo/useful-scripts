@@ -63,26 +63,26 @@ trace_config.on_request_exception.append(on_request_exception)
 class RateLimitedClientSession(RateLimiterMixin, ClientSession):
     @override
     async def _request(self, *args, **kwargs):
-        async with self._rate_limiter:
+        async with self._RateLimiterMixin__rate_limiter:
             return await super()._request(*args, **kwargs)
 
     @override
     async def close(self) -> None:
         await super().close()
 
-        self._rate_limiter.close()
+        self._RateLimiterMixin__rate_limiter.close()
 
 
 class RateLimitRetry(ExponentialRetry):
     def __init__(self, *args, rate_limit_timeout, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.rate_limit_timeout = rate_limit_timeout
+        self.__rate_limit_timeout = rate_limit_timeout
 
     def get_timeout(self, attempt, response, *args, **kwargs):
         if response is not None and response.status in RATE_LIMIT_STATUS_CODES:
             self.attempts += 1
-            return self.rate_limit_timeout
+            return self.__rate_limit_timeout
 
         return super().get_timeout(attempt, response, *args, **kwargs)
 

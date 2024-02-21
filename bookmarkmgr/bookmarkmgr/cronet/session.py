@@ -176,7 +176,7 @@ class RetrySession(Session):
             **kwargs,
         )
 
-        self.rate_limit_timeout = rate_limit_timeout
+        self.__rate_limit_timeout = rate_limit_timeout
 
     async def _request(self, method, url, *args, is_retry, **kwargs):
         if is_retry:
@@ -263,7 +263,7 @@ class RetrySession(Session):
                 delay = start_delay * factor
                 factor *= 2
             else:
-                delay = self.rate_limit_timeout
+                delay = self.__rate_limit_timeout
                 max_attempts += 1
 
             await asyncio.sleep(delay)
@@ -288,13 +288,13 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
         )
 
     async def _request(self, *args, **kwargs):
-        async with self._rate_limiter:
+        async with self._RateLimiterMixin__rate_limiter:
             return await super()._request(*args, **kwargs)
 
     def close(self):
         super().close()
 
-        self._rate_limiter.close()
+        self._RateLimiterMixin__rate_limiter.close()
 
 
 class PerHostnameRateLimitedSession(RetrySession):
@@ -306,21 +306,21 @@ class PerHostnameRateLimitedSession(RetrySession):
     ):
         super().__init__(*args, **kwargs)
 
-        self._null_context = nullcontext()
-        self._rate_limiters = {
+        self.__null_context = nullcontext()
+        self.__rate_limiters = {
             hostname.lower(): RateLimiter(limit, period)
             for hostname, limit, period in host_rate_limits
         }
 
     async def _request(self, method, url, *args, **kwargs):
-        async with self._rate_limiters.get(
+        async with self.__rate_limiters.get(
             urlparse(url).hostname.lower(),
-            self._null_context,
+            self.__null_context,
         ):
             return await super()._request(method, url, *args, **kwargs)
 
     def close(self):
         super().close()
 
-        for rate_limiter in self._rate_limiters.values():
+        for rate_limiter in self.__rate_limiters.values():
             rate_limiter.close()

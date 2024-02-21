@@ -25,6 +25,7 @@ from bookmarkmgr.clients.wayback_machine import (
     WaybackMachineClient,
     WaybackMachineError,
 )
+from bookmarkmgr.collections import DefaultsDict
 from bookmarkmgr.cronet import PerHostnameRateLimitedSession
 from bookmarkmgr.logging import get_logger
 from bookmarkmgr.utils.link_metadata import (
@@ -71,16 +72,6 @@ async def get_progress_bar(manager, description, **kwargs):
     finally:
         stop_refreshing = True
         await refresh_task
-
-
-class DefaultsDict(dict):
-    def __init__(self, *args, defaults, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.defaults = defaults
-
-    def __missing__(self, key):
-        return self.defaults[key]
 
 
 async def process_archival_result(
@@ -205,7 +196,7 @@ async def scrape_and_check(session, url):
     html = None
     response = None
 
-    async def scrape(url: str) -> tuple[scraper.HTMLScraper, cronet.Response]:
+    async def scrape(url: str) -> tuple[scraper.Page | None, cronet.Response]:
         nonlocal html, response
 
         html, response = await scraper.get_page(session, url)
@@ -424,7 +415,7 @@ async def maintain_raindrop(  # noqa: PLR0913
 
         await raindrop_client.update_raindrop(
             raindrop["_id"],
-            updated_raindrop,
+            updated_raindrop.data,
         )
     finally:
         if task_group_error is not None:

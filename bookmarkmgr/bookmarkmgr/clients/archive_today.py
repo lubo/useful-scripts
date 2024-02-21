@@ -16,17 +16,20 @@ class ArchiveTodayError(Exception):
     pass
 
 
-class TextExtractionHTMLParser(HTMLParser):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+def _extract_text(html):
+    text = ""
 
-        self.text_parts = []
+    def handle_data(data):
+        nonlocal text
 
-    def get_text(self):
-        return " ".join(self.text_parts)
+        text = " ".join(filter(len, [text, data.strip()]))
 
-    def handle_data(self, data):
-        self.text_parts.append(data.strip())
+    html_parser = HTMLParser()
+    html_parser.handle_data = handle_data
+
+    html_parser.feed(html)
+
+    return text
 
 
 class ArchiveTodayClient(ClientSessionContextManagerMixin):
@@ -46,10 +49,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
 
         if response.status_code == HTTPStatus.OK.value:
             if "Refresh" not in response.headers:
-                html_parser = TextExtractionHTMLParser()
-                html_parser.feed(response.text)
-
-                return None, html_parser.get_text()
+                return None, _extract_text(response.text)
 
             refresh_header = response.headers["Refresh"]
             try:

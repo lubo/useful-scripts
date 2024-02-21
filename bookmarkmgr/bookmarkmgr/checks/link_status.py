@@ -5,7 +5,7 @@ import re
 from urllib.parse import quote, urlparse
 
 from bookmarkmgr.cronet import RequestError, Response
-from bookmarkmgr.scraper import HTMLScraper
+from bookmarkmgr.scraper import Page
 
 REDIRECT_STATUS_CODES = {
     HTTPStatus.MOVED_PERMANENTLY.value,
@@ -29,7 +29,7 @@ class LinkStatus(IntEnum):
 
 
 async def check_link_status(
-    get_page_awaitable: Awaitable[tuple[HTMLScraper, Response]],
+    get_page_awaitable: Awaitable[tuple[Page | None, Response]],
 ) -> tuple[LinkStatus, None | str]:
     link_status = LinkStatus.OK
     error = None
