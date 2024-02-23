@@ -234,7 +234,7 @@ class RetrySession(Session):
 
                     return response
             except RequestError as err:
-                error = f"{err}: {method} {url}"
+                error = str(err)
 
                 if attempt == max_attempts:
                     logger.debug(error)

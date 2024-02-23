@@ -84,7 +84,7 @@ async def process_archival_result(
     try:
         archival_url, error = await result_future
     except (ArchiveTodayError, WaybackMachineError) as error:
-        logger.error(error)
+        logger.error("Archival failed: %s", error)
         return
 
     if error is None:

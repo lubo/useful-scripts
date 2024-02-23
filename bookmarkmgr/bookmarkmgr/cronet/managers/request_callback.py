@@ -141,9 +141,13 @@ def _on_request_failed(
 ):
     manager = _get_manager(callback)
     manager.request_error = RequestError(
-        ffi.string(
-            lib.Cronet_Error_message_get(error),
-        ).decode(),
+        "{}: {} {}".format(
+            ffi.string(
+                lib.Cronet_Error_message_get(error),
+            ).decode(),
+            manager.request_parameters.method,
+            manager.request_parameters.url,
+        ),
         code=lib.Cronet_Error_error_code_get(error),
     )
     manager.on_request_finished()
