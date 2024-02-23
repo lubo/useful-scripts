@@ -1,3 +1,6 @@
+# ruff: noqa: PGH003
+# type: ignore
+
 import re
 import subprocess
 

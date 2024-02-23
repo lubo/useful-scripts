@@ -1,24 +1,29 @@
 import asyncio
+from collections.abc import Awaitable
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
+from typing import Any, cast, NewType, Self
 
 from bookmarkmgr.cronet._cronet import ffi, lib
 
+_Executor = NewType("_Executor", object)
+_Runnable = NewType("_Runnable", object)
 
-@ffi.def_extern()
-def _executor_execute(executor, runnable):
+
+@ffi.def_extern()  # type: ignore[misc]
+def _executor_execute(executor: _Executor, runnable: _Runnable) -> None:
     manager = ffi.from_handle(lib.Cronet_Executor_GetClientContext(executor))
     manager.enqueue_runnable(runnable)
 
 
 class ExecutorManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self._handle = ffi.new_handle(self)
-        self._queue = Queue()
-        self._worker = None
-        self.executor = None
+        self._queue: Queue[_Runnable | None] = Queue()
+        self._worker: Awaitable[Any] | None = None
+        self.executor: _Executor | None = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         if self.executor is None:
             self.executor = lib.Cronet_Executor_CreateWith(
                 lib._executor_execute,  # noqa: SLF001
@@ -32,26 +37,31 @@ class ExecutorManager:
 
         return self
 
-    async def __aexit__(self, exc_type, *args, **kwargs):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        *args: Any,  # noqa: PYI036
+        **kwargs: Any,
+    ) -> None:
         if exc_type is not None:
             self.shutdown()
 
         try:
-            await self._worker
+            await cast(Awaitable[Any], self._worker)
         finally:
             lib.Cronet_Executor_Destroy(self.executor)
             self.executor = None
 
             self._worker = None
 
-    async def _spawn_worker_thread(self):
+    async def _spawn_worker_thread(self) -> None:
         with ThreadPoolExecutor() as pool:
             await asyncio.get_running_loop().run_in_executor(
                 pool,
                 self._worker_loop,
             )
 
-    def _worker_loop(self):
+    def _worker_loop(self) -> None:
         while (runnable := self._queue.get()) is not None:
             try:
                 if self._processing_allowed:
@@ -59,9 +69,9 @@ class ExecutorManager:
             finally:
                 lib.Cronet_Runnable_Destroy(runnable)
 
-    def enqueue_runnable(self, runnable):
+    def enqueue_runnable(self, runnable: _Runnable) -> None:
         self._queue.put_nowait(runnable)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self._processing_allowed = False
         self._queue.put_nowait(None)

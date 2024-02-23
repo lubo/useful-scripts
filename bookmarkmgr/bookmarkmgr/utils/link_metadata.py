@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 _HIDDEN_SECTION_END = "-->"
 _HIDDEN_SECTION_START = "<!--"
 
@@ -6,14 +8,16 @@ _VISIBLE_METADATA = {
     "Archive (WM)",
 }
 
+Metadata = dict[str, str]
 
-def _pairs_to_lines(pairs):
+
+def _pairs_to_lines(pairs: Iterable[tuple[str, str]]) -> list[str]:
     return [f"{key}: {value}" for key, value in sorted(pairs)]
 
 
-def metadata_to_note(metadata):
-    hidden = []
-    visible = []
+def metadata_to_note(metadata: Metadata) -> str:
+    hidden: list[tuple[str, str]] = []
+    visible: list[tuple[str, str]] = []
 
     for key, value in metadata.items():
         group = visible if key in _VISIBLE_METADATA else hidden
@@ -31,7 +35,7 @@ def metadata_to_note(metadata):
     return "\n".join(lines)
 
 
-def metadata_from_note(note):
+def metadata_from_note(note: str) -> Metadata:
     metadata = {}
 
     for line in note.splitlines():

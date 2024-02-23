@@ -2,19 +2,22 @@ from asyncio import Event
 from datetime import datetime
 from urllib.parse import parse_qsl, urlencode, urlparse
 
+from bookmarkmgr import scraper
+from bookmarkmgr.clients.raindrop import RaindropOut
+
 
 class _Link:
-    def __init__(self, raindrop):
+    def __init__(self, raindrop: RaindropOut) -> None:
         self.created = datetime.fromisoformat(raindrop["created"])
         self.id = raindrop["_id"]
 
-    def __lt__(self, other):
+    def __lt__(self, other: "_Link") -> bool:
         return self.created < other.created or (
             self.created == other.created and self.id < other.id
         )
 
 
-def _remove_query_from_url(url):
+def _remove_query_from_url(url: str) -> str:
     parsed_url = urlparse(url)
 
     if parsed_url.query == "":
@@ -24,13 +27,13 @@ def _remove_query_from_url(url):
 
 
 class DuplicateLinkChecker:
-    def __init__(self):
+    def __init__(self) -> None:
         self._all_links_received = Event()
         self._link_count = 0
-        self._original_links = {}
+        self._original_links: dict[str, _Link] = {}
         self._required_link_count = 0
 
-    def add_link(self, raindrop):
+    def add_link(self, raindrop: RaindropOut) -> None:
         url = raindrop["link"]
         original_link = self._original_links.get(url)
         tested_link = _Link(raindrop)
@@ -41,7 +44,7 @@ class DuplicateLinkChecker:
         self._link_count += 1
         self._process_links()
 
-    async def is_link_duplicate(self, raindrop):
+    async def is_link_duplicate(self, raindrop: RaindropOut) -> bool:
         if not self._all_links_received.is_set():
             await self._all_links_received.wait()
 
@@ -56,11 +59,11 @@ class DuplicateLinkChecker:
 
         return original_link < tested_link
 
-    def set_required_link_count(self, count):
+    def set_required_link_count(self, count: int) -> None:
         self._required_link_count = count
         self._process_links()
 
-    def _process_links(self):
+    def _process_links(self) -> None:
         if self._link_count != self._required_link_count:
             return
 
@@ -79,14 +82,14 @@ class DuplicateLinkChecker:
         self._all_links_received.set()
 
 
-def get_canonical_url(html, url):
+def get_canonical_url(page: scraper.Page, url: str) -> str | None:
     canonical_url = next(
         filter(
             bool,
             [
-                html.default_lang_url,
-                html.canonical_url,
-                html.og_url,
+                page.default_lang_url,
+                page.canonical_url,
+                page.og_url,
             ],
         ),
         None,

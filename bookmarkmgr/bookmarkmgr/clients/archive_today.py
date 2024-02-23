@@ -16,16 +16,16 @@ class ArchiveTodayError(Exception):
     pass
 
 
-def _extract_text(html):
+def _extract_text(html: str) -> str:
     text = ""
 
-    def handle_data(data):
+    def handle_data(data: str) -> None:
         nonlocal text
 
         text = " ".join(filter(len, [text, data.strip()]))
 
     html_parser = HTMLParser()
-    html_parser.handle_data = handle_data
+    html_parser.handle_data = handle_data  # type: ignore[method-assign]
 
     html_parser.feed(html)
 
@@ -33,12 +33,12 @@ def _extract_text(html):
 
 
 class ArchiveTodayClient(ClientSessionContextManagerMixin):
-    def __init__(self):
+    def __init__(self) -> None:
         self._session = RateLimitedSession(
             rate_limit=6,
         )
 
-    async def _archive_page(self, url):
+    async def _archive_page(self, url: str) -> tuple[str | None, str | None]:
         response = await self._session.get(
             "https://archive.ph/submit/",
             allow_redirects=False,
@@ -106,7 +106,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
 
         return (response.redirect_url, None)
 
-    async def archive_page(self, url):
+    async def archive_page(self, url: str) -> tuple[str | None, str | None]:
         try:
             return await self._archive_page(url)
         except CronetError as error:

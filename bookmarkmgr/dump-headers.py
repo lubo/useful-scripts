@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# ruff: noqa: PGH003
+# type: ignore
+
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 

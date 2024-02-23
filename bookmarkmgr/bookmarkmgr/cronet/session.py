@@ -1,6 +1,8 @@
 import asyncio
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from contextlib import nullcontext
 from http import HTTPStatus
+from typing import Any, cast, Self
 from urllib.parse import urlparse
 
 from yarl import URL
@@ -13,7 +15,7 @@ from .errors import _raise_for_error_result, Error, RequestError
 from .logging import logger
 from .managers.executor import ExecutorManager
 from .managers.request_callback import RequestCallbackManager
-from .models import RequestParameters
+from .models import RequestParameters, Response
 from .utils import adestroying, destroying
 
 INIT_MAX_RETRY_ATTEMPTS = 5
@@ -37,26 +39,30 @@ RETRYABLE_STATUS_CODES = {
 
 
 class Session:
-    def __init__(self):
+    def __init__(self) -> None:
         self._engine = None
 
         self._open()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         self._open()
 
         return self
 
-    async def __aexit__(self, *args, **kwargs):
+    async def __aexit__(
+        self,
+        *args: Any,  # noqa: PYI036
+        **kwargs: Any,
+    ) -> None:
         self.close()
 
-    def _dispose_engine(self):
+    def _dispose_engine(self) -> None:
         lib.Cronet_Engine_Destroy(self._engine)
         self._engine = None
 
-    def _open(self):
+    def _open(self) -> None:
         if self._engine is not None:
-            return
+            return  # type: ignore[unreachable]
 
         self._engine = lib.Cronet_Engine_Create()
 
@@ -72,38 +78,44 @@ class Session:
             self._dispose_engine()
             raise
 
-    def close(self):
+    def close(self) -> None:
         _raise_for_error_result(lib.Cronet_Engine_Shutdown(self._engine))
         self._dispose_engine()
 
-    async def delete(self, *args, **kwargs):
+    async def delete(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("DELETE", *args, **kwargs)
 
-    async def get(self, *args, **kwargs):
+    async def get(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("GET", *args, **kwargs)
 
-    async def head(self, *args, **kwargs):
+    async def head(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("HEAD", *args, **kwargs)
 
-    async def options(self, *args, **kwargs):
+    async def options(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("OPTIONS", *args, **kwargs)
 
-    async def patch(self, *args, **kwargs):
+    async def patch(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("PATCH", *args, **kwargs)
 
-    async def post(self, *args, **kwargs):
+    async def post(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("POST", *args, **kwargs)
 
-    async def put(self, *args, **kwargs):
+    async def put(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("PUT", *args, **kwargs)
 
-    async def request(self, method, url, params=None, **kwargs):
+    async def request(
+        self,
+        method: str,
+        url: str,
+        params: Mapping[str, str] | None = None,
+        **kwargs: Any,
+    ) -> Response:
         if params is not None:
             url = str(URL(url).update_query(params))
 
         executor_manager = ExecutorManager()
 
-        def on_request_finished():
+        def on_request_finished() -> None:
             executor_manager.shutdown()
 
         async with (
@@ -167,10 +179,10 @@ class Session:
 class RetrySession(Session):
     def __init__(
         self,
-        *args,
-        rate_limit_timeout=60,
-        **kwargs,
-    ):
+        *args: Any,
+        rate_limit_timeout: float = 60,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(
             *args,
             **kwargs,
@@ -178,7 +190,14 @@ class RetrySession(Session):
 
         self.__rate_limit_timeout = rate_limit_timeout
 
-    async def _request(self, method, url, *args, is_retry, **kwargs):
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        *args: Any,
+        is_retry: bool,
+        **kwargs: Any,
+    ) -> Response:
         if is_retry:
             logger.debug("Retrying %s %s", method, url)
 
@@ -186,12 +205,12 @@ class RetrySession(Session):
 
     async def request(  # noqa: C901
         self,
-        method,
-        url,
-        *args,
-        retry_predicate=None,
-        **kwargs,
-    ):
+        method: str,
+        url: str,
+        *args: Any,
+        retry_predicate: Callable[[Response], Awaitable[bool]] | None = None,
+        **kwargs: Any,
+    ) -> Response:
         attempt = 1
         factor = 1
         is_retry = False
@@ -274,11 +293,11 @@ class RetrySession(Session):
 class RateLimitedSession(RateLimiterMixin, RetrySession):
     def __init__(
         self,
-        *args,
-        rate_limit,
-        rate_limit_period=60,
-        **kwargs,
-    ):
+        *args: Any,
+        rate_limit: int,
+        rate_limit_period: float = 60,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(
             *args,
             **kwargs,
@@ -287,11 +306,11 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
             rate_limit_timeout=rate_limit_period,
         )
 
-    async def _request(self, *args, **kwargs):
+    async def _request(self, *args: Any, **kwargs: Any) -> Response:
         async with self._RateLimiterMixin_rate_limiter:
             return await super()._request(*args, **kwargs)
 
-    def close(self):
+    def close(self) -> None:
         super().close()
 
         self._RateLimiterMixin_rate_limiter.close()
@@ -300,10 +319,10 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
 class PerHostnameRateLimitedSession(RetrySession):
     def __init__(
         self,
-        *args,
-        host_rate_limits,
-        **kwargs,
-    ):
+        *args: Any,
+        host_rate_limits: Iterable[tuple[str, int, float]],
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
 
         self.__null_context = nullcontext()
@@ -312,14 +331,20 @@ class PerHostnameRateLimitedSession(RetrySession):
             for hostname, limit, period in host_rate_limits
         }
 
-    async def _request(self, method, url, *args, **kwargs):
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
         async with self.__rate_limiters.get(
-            urlparse(url).hostname.lower(),
+            cast(str, urlparse(url).hostname).lower(),
             self.__null_context,
         ):
             return await super()._request(method, url, *args, **kwargs)
 
-    def close(self):
+    def close(self) -> None:
         super().close()
 
         for rate_limiter in self.__rate_limiters.values():

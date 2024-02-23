@@ -28,7 +28,7 @@ class WaybackMachineError(Exception):
 
 
 class WaybackMachineClient(ClientSessionContextManagerMixin):
-    def __init__(self):
+    def __init__(self) -> None:
         self._session = RateLimitedRetryClientSession(
             # $ for i in $(seq 25); do netcat web.archive.org 443 &; done; wait
             # ...
@@ -44,7 +44,10 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             start_timeout=30,
         )
 
-    async def _archive_page(self, url):  # noqa: C901
+    async def _archive_page(  # noqa: C901
+        self,
+        url: str,
+    ) -> tuple[str | None, str | None]:
         request_paramaters = {
             "url": url,
         }
@@ -159,7 +162,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             f"{data['original_url']}"
         ), None
 
-    async def archive_page(self, url):
+    async def archive_page(self, url: str) -> tuple[str | None, str | None]:
         try:
             return await self._archive_page(url)
         except ClientError as error:

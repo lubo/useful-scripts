@@ -2,38 +2,49 @@
 
 import argparse
 import asyncio
+from collections.abc import Callable
 from getpass import getpass
 import logging
 import signal
 import sys
+from types import FrameType
 
 from . import DEBUG
 from .clients.raindrop import RaindropClient
 from .commands.export_collection import export_collection
-from .commands.maintain_collection import maintain_collection
+from .commands.maintain_collection import (
+    maintain_collection,
+    MaintainCollectionOptions,
+)
 
 
-def _sigint_handler(signum, frame):  # noqa: ARG001
+def _sigint_handler(
+    signum: int,  # noqa: ARG001
+    frame: FrameType | None,  # noqa: ARG001
+) -> None:
     sys.exit(130)
 
 
-def _host_rate_limits_parser():
-    index = 0
+def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
+    index = -1
 
-    def parse(value):
+    def parse(value: str) -> float | int | str:
         nonlocal index
 
-        if index > 0:
-            value = int(value)
-
         index += 1
+
+        match index:
+            case 1:
+                return int(value)
+            case 2:
+                return float(value)
 
         return value
 
     return parse
 
 
-async def run_command(args, raindrop_api_key):
+async def run_command(args: argparse.Namespace, raindrop_api_key: str) -> None:
     async with RaindropClient(raindrop_api_key) as raindrop_client:
         match args.command:
             case "export-collection":
@@ -42,11 +53,16 @@ async def run_command(args, raindrop_api_key):
                 await maintain_collection(
                     raindrop_client,
                     args.collection_id,
-                    args,
+                    MaintainCollectionOptions(
+                        args.host_rate_limits,
+                        args.no_archive,
+                        args.no_archive_broken,
+                        args.no_checks,
+                    ),
                 )
 
 
-def main():
+def main() -> None:
     signal.signal(signal.SIGINT, _sigint_handler)
 
     logging.basicConfig(
@@ -64,6 +80,7 @@ def main():
     export_collection_parser.add_argument(
         "collection_id",
         help="ID of a collection to be exported",
+        type=int,
     )
 
     maintain_collection_parser = subparsers.add_parser(
@@ -73,6 +90,7 @@ def main():
     maintain_collection_parser.add_argument(
         "collection_id",
         help="ID of a collection to be maintained",
+        type=int,
     )
     maintain_collection_parser.add_argument(
         "--host-rate-limit",

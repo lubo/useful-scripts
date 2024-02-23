@@ -25,41 +25,50 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
     page = Page()
     path: list[str] = []
 
-    def handle_selfclosingtag(tag, attrs):
+    def handle_selfclosingtag(
+        tag: str,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
         if path != ["html", "head"]:
             return
 
-        attrs = {key: value for key, value in attrs}  # noqa: C416
+        attrs_dict = {key: value for key, value in attrs}  # noqa: C416
 
         match tag:
             case "link":
-                match attrs.get("rel"):
+                match attrs_dict.get("rel"):
                     case "alternate":
-                        match attrs.get("hreflang"):
+                        match attrs_dict.get("hreflang"):
                             case "x-default":
-                                page.default_lang_url = attrs.get("href")
+                                page.default_lang_url = attrs_dict.get("href")
                     case "canonical":
-                        page.canonical_url = attrs.get("href")
+                        page.canonical_url = attrs_dict.get("href")
             case "meta":
-                match attrs.get("property"):
+                match attrs_dict.get("property"):
                     case "og:url":
-                        page.og_url = attrs.get("content")
+                        page.og_url = attrs_dict.get("content")
 
-    def handle_data(data):
+    def handle_data(data: str) -> None:
         match path:
             case ["html", "body"]:
                 page.body_text = data.strip()
             case ["html", "head", "title"]:
                 page.title = data.strip()
 
-    def handle_endtag(tag):
+    def handle_endtag(tag: str) -> None:
         if len(path) > 0 and path[-1] == tag:
             del path[-1]
 
-    def handle_startendtag(tag, attrs):
+    def handle_startendtag(
+        tag: str,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
         handle_selfclosingtag(tag, attrs)
 
-    def handle_starttag(tag, attrs):
+    def handle_starttag(
+        tag: str,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
         handle_selfclosingtag(tag, attrs)
 
         if tag not in INVALID_HTML_PARENTS:
@@ -86,7 +95,7 @@ async def get_page(
 ) -> tuple[Page | None, Response]:
     page = None
 
-    async def retry_predicate(response):
+    async def retry_predicate(response: Response) -> bool:
         if response.status_code != HTTPStatus.OK.value:
             return False
 

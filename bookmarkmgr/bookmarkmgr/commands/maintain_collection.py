@@ -1,8 +1,11 @@
 import asyncio
+from collections.abc import AsyncIterator, Awaitable, Callable
 import contextlib
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
+from typing import Any, cast
 
 import enlighten
 
@@ -21,14 +24,20 @@ from bookmarkmgr.clients.archive_today import (
     ArchiveTodayClient,
     ArchiveTodayError,
 )
+from bookmarkmgr.clients.raindrop import (
+    RaindropClient,
+    RaindropIn,
+    RaindropOut,
+)
 from bookmarkmgr.clients.wayback_machine import (
     WaybackMachineClient,
     WaybackMachineError,
 )
-from bookmarkmgr.collections import DefaultsDict
+from bookmarkmgr.collections import TypedDefaultsDict
 from bookmarkmgr.cronet import PerHostnameRateLimitedSession
 from bookmarkmgr.logging import get_logger
 from bookmarkmgr.utils.link_metadata import (
+    Metadata,
     metadata_from_note,
     metadata_to_note,
 )
@@ -47,8 +56,20 @@ LINK_STATUS_TAGS = {
 }
 
 
+@dataclass(frozen=True)
+class MaintainCollectionOptions:
+    host_rate_limits: list[tuple[str, int, float]]
+    no_archive: bool
+    no_archive_broken: bool
+    no_checks: bool
+
+
 @asynccontextmanager
-async def get_progress_bar(manager, description, **kwargs):
+async def get_progress_bar(
+    manager: enlighten.Manager,
+    description: str,
+    **kwargs: Any,
+) -> AsyncIterator[enlighten.Counter]:
     progress_bar = manager.counter(
         desc=description,
         unit="links",
@@ -56,7 +77,7 @@ async def get_progress_bar(manager, description, **kwargs):
     )
     stop_refreshing = False
 
-    async def refresh():
+    async def refresh() -> None:
         while True:
             if stop_refreshing:
                 progress_bar.close()
@@ -75,16 +96,16 @@ async def get_progress_bar(manager, description, **kwargs):
 
 
 async def process_archival_result(
-    result_future,
-    raindrop,
-    metadata,
-    service_initials,
-    service_name,
-):
+    result_awaitable: Awaitable[tuple[str | None, str | None]],
+    raindrop: RaindropIn,
+    metadata: Metadata,
+    service_initials: str,
+    service_name: str,
+) -> None:
     try:
-        archival_url, error = await result_future
-    except (ArchiveTodayError, WaybackMachineError) as error:
-        logger.error("Archival failed: %s", error)
+        archival_url, error = await result_awaitable
+    except (ArchiveTodayError, WaybackMachineError) as e:
+        logger.error("Archival failed: %s", e)
         return
 
     if error is None:
@@ -108,13 +129,13 @@ async def process_archival_result(
 
 
 def create_archival_tasks(  # noqa: PLR0913
-    task_group,
-    raindrop,
-    note_metadata,
-    at_client,
-    wm_client,
-    user_options,
-):
+    task_group: asyncio.TaskGroup,
+    raindrop: RaindropIn,
+    note_metadata: Metadata,
+    at_client: ArchiveTodayClient,
+    wm_client: WaybackMachineClient,
+    user_options: MaintainCollectionOptions,
+) -> list[asyncio.Task[None]]:
     is_link_broken = (
         len(
             {"broken", "possibly-broken"}.intersection(raindrop["tags"]),
@@ -165,7 +186,12 @@ def create_archival_tasks(  # noqa: PLR0913
     return tasks
 
 
-def add_or_remove_tag(raindrop, add_tag, tag, error=None):
+def add_or_remove_tag(
+    raindrop: RaindropIn,
+    add_tag: bool,  # noqa: FBT001
+    tag: str,
+    error: str | None = None,
+) -> None:
     tag_added = tag in raindrop["tags"]
 
     if not add_tag and not tag_added:
@@ -192,42 +218,47 @@ def add_or_remove_tag(raindrop, add_tag, tag, error=None):
     raindrop["tags"] = [*raindrop["tags"], tag]
 
 
-async def scrape_and_check(session, url):
-    html = None
+async def scrape_and_check(
+    session: cronet.Session,
+    url: str,
+) -> tuple[scraper.Page | None, LinkStatus, str | None, str | None]:
+    page = None
     response = None
 
     async def scrape(url: str) -> tuple[scraper.Page | None, cronet.Response]:
-        nonlocal html, response
+        nonlocal page, response
 
-        html, response = await scraper.get_page(session, url)
+        page, response = await scraper.get_page(session, url)
 
-        return html, response
+        return page, response
 
     link_status, error = await check_link_status(scrape(url))
 
     if response is None or (fixed_url := get_fixed_url(response, url)) is None:
-        return html, link_status, error, None
+        return page, link_status, error, None
 
-    old_html = html
+    old_page = page
 
     fixed_link_status, fixed_error = await check_link_status(
         scrape(fixed_url),
     )
 
     if fixed_link_status == LinkStatus.OK:
-        return html, fixed_link_status, fixed_error, fixed_url
+        return page, fixed_link_status, fixed_error, fixed_url
 
-    return old_html, link_status, error, None
+    return old_page, link_status, error, None
 
 
 async def process_scrape_and_check_result(  # noqa: C901, PLR0912
-    result_future,
-    raindrop,
-    metadata,
-    archival_tasks,
-    create_archival_tasks,
-):
-    html, link_status, error, fixed_url = await result_future
+    result_awaitable: Awaitable[
+        tuple[scraper.Page | None, LinkStatus, str | None, str | None]
+    ],
+    raindrop: RaindropIn,
+    metadata: Metadata,
+    archival_tasks: list[asyncio.Task[Any]],
+    create_archival_tasks: Callable[[asyncio.TaskGroup], Any],
+) -> None:
+    page, link_status, error, fixed_url = await result_awaitable
     now = datetime.now(tz=UTC)
     url = raindrop["link"]
 
@@ -238,10 +269,12 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
 
         raindrop["link"] = url = fixed_url
 
-    if link_status == LinkStatus.OK:  # noqa: SIM102
+    if link_status == LinkStatus.OK:
+        page = cast(scraper.Page, page)
+
         if (
             canonical_url := get_canonical_url(
-                html,
+                page,
                 metadata.get("Canonical URL") or url,
             )
         ) is not None:
@@ -253,9 +286,9 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
     if link_status in BROKEN_LINK_STATUSES:
         try:
             broken_since = datetime.fromisoformat(
-                metadata.get("Broken since"),
+                metadata.get("Broken since", ""),
             ).replace(tzinfo=UTC)
-        except (ValueError, TypeError):
+        except ValueError:
             broken_since = now
             metadata["Broken since"] = str(broken_since)
 
@@ -296,24 +329,29 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
         create_archival_tasks(task_group)
 
 
-async def process_check_duplicate_result(result_future, raindrop):
+async def process_check_duplicate_result(
+    result_awaitable: Awaitable[bool],
+    raindrop: RaindropIn,
+) -> None:
     add_or_remove_tag(
         raindrop,
-        await result_future,
+        await result_awaitable,
         "duplicate",
     )
 
 
 def create_raindrop_maintenance_tasks(  # noqa: PLR0913
-    task_group,
-    raindrop,
-    note_metadata,
-    at_client,
-    wm_client,
-    check_session,
-    duplicate_checker,
-    user_options,
-):
+    task_group: asyncio.TaskGroup,
+    raindrop_with_defauls: TypedDefaultsDict[RaindropIn, RaindropOut],
+    note_metadata: Metadata,
+    at_client: ArchiveTodayClient,
+    wm_client: WaybackMachineClient,
+    check_session: cronet.Session,
+    duplicate_checker: DuplicateLinkChecker,
+    user_options: MaintainCollectionOptions,
+) -> None:
+    raindrop = raindrop_with_defauls.to_typeddict()
+
     create_archival_tasks_partial = partial(
         create_archival_tasks,
         raindrop=raindrop,
@@ -326,9 +364,9 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
 
     try:
         last_check = datetime.fromisoformat(
-            note_metadata.get("Last check"),
+            note_metadata.get("Last check", ""),
         ).replace(tzinfo=UTC)
-    except (ValueError, TypeError):
+    except ValueError:
         last_check = datetime.fromtimestamp(0, tz=UTC)
 
     archival_tasks = create_archival_tasks_partial(task_group)
@@ -353,8 +391,8 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
         )
 
     if not user_options.no_checks:
-        canonical_url_raindrop = {
-            **raindrop.defaults,
+        canonical_url_raindrop: RaindropOut = {
+            **raindrop_with_defauls.defaults,
             "link": note_metadata.get("Canonical URL") or link,
         }
 
@@ -372,23 +410,25 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
 
 
 async def maintain_raindrop(  # noqa: PLR0913
-    raindrop_client,
-    raindrop,
-    at_client,
-    wm_client,
-    check_session,
-    duplicate_checker,
-    user_options,
-):
+    raindrop_client: RaindropClient,
+    raindrop: RaindropOut,
+    at_client: ArchiveTodayClient,
+    wm_client: WaybackMachineClient,
+    check_session: cronet.Session,
+    duplicate_checker: DuplicateLinkChecker,
+    user_options: MaintainCollectionOptions,
+) -> None:
     note_metadata = metadata_from_note(raindrop["note"])
     task_group_error = None
-    updated_raindrop = DefaultsDict(defaults=raindrop)
+    updated_raindrop_with_defauls = TypedDefaultsDict[RaindropIn, RaindropOut](
+        defaults=raindrop,
+    )
 
     try:
         async with ForgivingTaskGroup() as task_group:
             create_raindrop_maintenance_tasks(
                 task_group,
-                updated_raindrop,
+                updated_raindrop_with_defauls,
                 note_metadata,
                 at_client,
                 wm_client,
@@ -400,6 +440,8 @@ async def maintain_raindrop(  # noqa: PLR0913
         task_group_error = error
 
     try:
+        updated_raindrop = updated_raindrop_with_defauls.to_typeddict()
+
         if raindrop["note"] != (new_note := metadata_to_note(note_metadata)):
             updated_raindrop["note"] = new_note
 
@@ -408,12 +450,12 @@ async def maintain_raindrop(  # noqa: PLR0913
         ):
             updated_raindrop["tags"] = sorted_tags
 
-        if not updated_raindrop:
+        if not updated_raindrop_with_defauls:
             return
 
         await raindrop_client.update_raindrop(
             raindrop["_id"],
-            updated_raindrop.data,
+            updated_raindrop_with_defauls.data,
         )
     finally:
         if task_group_error is not None:
@@ -421,11 +463,12 @@ async def maintain_raindrop(  # noqa: PLR0913
 
 
 async def maintain_collection(
-    raindrop_client,
-    collection_id,
-    user_options,
-):
+    raindrop_client: RaindropClient,
+    collection_id: int,
+    user_options: MaintainCollectionOptions,
+) -> None:
     items = raindrop_client.get_collection_items(collection_id)
+
     duplicate_checker = DuplicateLinkChecker()
     progress_bar_manager = enlighten.get_manager()
 
@@ -448,8 +491,8 @@ async def maintain_collection(
     ):
 
         def on_task_done(
-            task,  # noqa: ARG001
-        ):
+            task: asyncio.Task[Any],  # noqa: ARG001
+        ) -> None:
             maintaining_progress_bar.count += 1
 
         async for item in items:

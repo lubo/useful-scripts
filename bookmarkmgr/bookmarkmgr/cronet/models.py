@@ -18,10 +18,10 @@ class Response:
     headers: Message = field(default_factory=Message)
     reason: str = ""
     redirect_url: str = ""
-    status_code: int | None = None
+    status_code: int = 0
 
     @property
-    def ok(self):
+    def ok(self) -> bool:
         return (
             HTTPStatus.OK.value
             <= self.status_code
@@ -29,5 +29,5 @@ class Response:
         )
 
     @property
-    def text(self):
+    def text(self) -> str:
         return self.content.decode(self.charset, "replace")

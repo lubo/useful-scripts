@@ -1,10 +1,26 @@
 [tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+explicit_package_bases = true
+extra_checks = true
+no_implicit_reexport = true
+python_executable = "${VIRTUAL_ENV}/bin/python"
 python_version = "3.11"
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = [
     "bookmarkmgr.cronet._cronet",
-    "cffi",
     "enlighten",
 ]
 ignore_missing_imports = true

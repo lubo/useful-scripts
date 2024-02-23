@@ -1,12 +1,17 @@
 import asyncio
 from http import HTTPStatus
+from types import SimpleNamespace
+from typing import Any
 
 from aiohttp import (
     ClientConnectionError,
     ClientPayloadError,
+    ClientResponse,
     ClientSession,
     TCPConnector,
     TraceConfig,
+    TraceRequestEndParams,
+    TraceRequestExceptionParams,
 )
 from aiohttp_retry import ExponentialRetry, RetryClient
 from overrides import override
@@ -23,10 +28,10 @@ RATE_LIMIT_STATUS_CODES = {
 
 
 async def on_request_end(
-    session,  # noqa: ARG001
-    context,  # noqa: ARG001
-    params,
-):
+    session: ClientSession,  # noqa: ARG001
+    context: SimpleNamespace,  # noqa: ARG001
+    params: TraceRequestEndParams,
+) -> None:
     if params.response.ok:
         return
 
@@ -40,10 +45,10 @@ async def on_request_end(
 
 
 async def on_request_exception(
-    session,  # noqa: ARG001
-    context,  # noqa: ARG001
-    params,
-):
+    session: ClientSession,  # noqa: ARG001
+    context: SimpleNamespace,  # noqa: ARG001
+    params: TraceRequestExceptionParams,
+) -> None:
     if isinstance(params.exception, asyncio.CancelledError):
         return
 
@@ -62,7 +67,7 @@ trace_config.on_request_exception.append(on_request_exception)
 
 class RateLimitedClientSession(RateLimiterMixin, ClientSession):
     @override
-    async def _request(self, *args, **kwargs):
+    async def _request(self, *args: Any, **kwargs: Any) -> ClientResponse:
         async with self._RateLimiterMixin_rate_limiter:
             return await super()._request(*args, **kwargs)
 
@@ -74,12 +79,23 @@ class RateLimitedClientSession(RateLimiterMixin, ClientSession):
 
 
 class RateLimitRetry(ExponentialRetry):
-    def __init__(self, *args, rate_limit_timeout, **kwargs):
+    def __init__(
+        self,
+        *args: Any,
+        rate_limit_timeout: float,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
 
         self.__rate_limit_timeout = rate_limit_timeout
 
-    def get_timeout(self, attempt, response, *args, **kwargs):
+    def get_timeout(
+        self,
+        attempt: int,
+        response: ClientResponse | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> float:
         if response is not None and response.status in RATE_LIMIT_STATUS_CODES:
             self.attempts += 1
             return self.__rate_limit_timeout
@@ -90,16 +106,15 @@ class RateLimitRetry(ExponentialRetry):
 class RetryClientSession(RetryClient):
     def __init__(
         self,
-        base_url=None,
-        *args,
-        connection_limit=None,
-        raise_for_status=True,
-        **kwargs,
-    ):
+        base_url: str | None = None,
+        *,
+        connection_limit: int | None = None,
+        raise_for_status: bool = True,
+        **kwargs: Any,
+    ) -> None:
         trace_configs = kwargs.pop("trace_configs", [trace_config])
 
         super().__init__(
-            *args,
             **kwargs,
             base_url=base_url,
             connector=(
@@ -117,13 +132,13 @@ class RetryClientSession(RetryClient):
 class RateLimitedRetryClientSession(RetryClientSession):
     def __init__(
         self,
-        *args,
-        attempts=3,
-        connection_limit=None,
-        rate_limit_period=60,
-        start_timeout=0.25,
-        **kwargs,
-    ):
+        *args: Any,
+        attempts: int = 3,
+        connection_limit: int | None = None,
+        rate_limit_period: float = 60,
+        start_timeout: float = 0.25,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(
             *args,
             **kwargs,
@@ -146,7 +161,7 @@ class RateLimitedRetryClientSession(RetryClientSession):
             ),
         )
 
-    async def response_callback(self, response):
+    async def response_callback(self, response: ClientResponse) -> bool:
         return (
             response is not None
             and response.status not in RATE_LIMIT_STATUS_CODES
