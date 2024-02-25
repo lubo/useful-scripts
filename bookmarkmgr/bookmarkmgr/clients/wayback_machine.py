@@ -100,8 +100,8 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             ) as response:
                 if response.status != HTTPStatus.FOUND.value:
                     message = (
-                        f"Unexpected status code {response.status_code} "
-                        f"for {response.url}"
+                        f"Unexpected status code {response.status} for "
+                        f"{response.url}"
                     )
                     raise WaybackMachineError(message) from None
 
