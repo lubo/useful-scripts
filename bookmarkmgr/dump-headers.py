@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
-        self.send_response(200)
+        self.send_response(HTTPStatus.OK.value)
         self.end_headers()
         self.wfile.write(b"<script>window.close()</script>")
 

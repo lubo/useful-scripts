@@ -44,7 +44,7 @@ async def check_link_status(
         return link_status, error
 
     match response.status_code:
-        case 200:
+        case HTTPStatus.OK.value:
             page = cast(Page, page)
 
             if page.title == "Video deleted":
@@ -66,7 +66,7 @@ async def check_link_status(
             ) is not None:
                 link_status = LinkStatus.POSSIBLY_BROKEN
                 error = match.group(1)
-        case 401 | 403:
+        case HTTPStatus.UNAUTHORIZED.value | HTTPStatus.FORBIDDEN.value:
             link_status = LinkStatus.BLOCKED
 
     if error is not None or (
