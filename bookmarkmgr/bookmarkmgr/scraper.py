@@ -66,10 +66,14 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
             path.append(tag)
 
     html_parser = HTMLParser()
-    html_parser.handle_data = handle_data
-    html_parser.handle_endtag = handle_endtag
-    html_parser.handle_startendtag = handle_startendtag
-    html_parser.handle_starttag = handle_starttag
+    html_parser.handle_data = handle_data  # type: ignore[method-assign]
+    html_parser.handle_endtag = handle_endtag  # type: ignore[method-assign]
+    html_parser.handle_startendtag = (  # type: ignore[method-assign]
+        handle_startendtag
+    )
+    html_parser.handle_starttag = (  # type: ignore[method-assign]
+        handle_starttag
+    )
 
     html_parser.feed(html)
 

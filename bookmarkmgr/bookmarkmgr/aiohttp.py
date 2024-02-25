@@ -63,14 +63,14 @@ trace_config.on_request_exception.append(on_request_exception)
 class RateLimitedClientSession(RateLimiterMixin, ClientSession):
     @override
     async def _request(self, *args, **kwargs):
-        async with self._RateLimiterMixin__rate_limiter:
+        async with self._RateLimiterMixin_rate_limiter:
             return await super()._request(*args, **kwargs)
 
     @override
     async def close(self) -> None:
         await super().close()
 
-        self._RateLimiterMixin__rate_limiter.close()
+        self._RateLimiterMixin_rate_limiter.close()
 
 
 class RateLimitRetry(ExponentialRetry):

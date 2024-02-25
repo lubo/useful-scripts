@@ -2,7 +2,8 @@ from collections.abc import Awaitable
 from enum import IntEnum, unique
 from http import HTTPStatus
 import re
-from urllib.parse import quote, urlparse
+from typing import cast
+from urllib.parse import ParseResult, quote, urlparse
 
 from bookmarkmgr.cronet import RequestError, Response
 from bookmarkmgr.scraper import Page
@@ -35,7 +36,7 @@ async def check_link_status(
     error = None
 
     try:
-        html_parser, response = await get_page_awaitable
+        page, response = await get_page_awaitable
     except RequestError as e:
         link_status = LinkStatus.POSSIBLY_BROKEN
         error = str(e)
@@ -44,13 +45,15 @@ async def check_link_status(
 
     match response.status_code:
         case 200:
-            if html_parser.title == "Video deleted":
+            page = cast(Page, page)
+
+            if page.title == "Video deleted":
                 link_status = LinkStatus.BROKEN
-                error = html_parser.title
+                error = page.title
             elif (
                 match := re.fullmatch(
                     r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
-                    html_parser.title,
+                    page.title,
                 )
             ) is not None:
                 link_status = LinkStatus.BROKEN
@@ -58,7 +61,7 @@ async def check_link_status(
             elif (
                 match := re.fullmatch(
                     r"(Video Disabled) - [a-zA-Z]{7}\.[a-z]{3}",
-                    html_parser.title,
+                    page.title,
                 )
             ) is not None:
                 link_status = LinkStatus.POSSIBLY_BROKEN
@@ -81,7 +84,10 @@ async def check_link_status(
     return link_status, error
 
 
-def _get_quoted_url_matching_redirect(response, parsed_url):
+def _get_quoted_url_matching_redirect(
+    response: Response,
+    parsed_url: ParseResult,
+) -> str | None:
     if response.status_code not in REDIRECT_STATUS_CODES:
         return None
 
@@ -109,7 +115,7 @@ def get_fixed_url(response: Response, url: str) -> None | str:
 
     # Raindrop breaks some links during import by removing trailing slash and
     # by adding trailing slash during new link addition.
-    potentially_fixed_url = parsed_url._replace(
+    potentially_fixed_parsed_url = parsed_url._replace(
         path=(
             parsed_url.path.rstrip("/")
             if parsed_url.path.endswith("/")
@@ -120,12 +126,12 @@ def get_fixed_url(response: Response, url: str) -> None | str:
     if (
         quoted_url := _get_quoted_url_matching_redirect(
             response,
-            potentially_fixed_url,
+            potentially_fixed_parsed_url,
         )
     ) is not None:
         return quoted_url
 
-    potentially_fixed_url = potentially_fixed_url.geturl()
+    potentially_fixed_url = potentially_fixed_parsed_url.geturl()
 
     if (
         response.status_code in REDIRECT_STATUS_CODES

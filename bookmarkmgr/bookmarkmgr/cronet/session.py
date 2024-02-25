@@ -288,13 +288,13 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
         )
 
     async def _request(self, *args, **kwargs):
-        async with self._RateLimiterMixin__rate_limiter:
+        async with self._RateLimiterMixin_rate_limiter:
             return await super()._request(*args, **kwargs)
 
     def close(self):
         super().close()
 
-        self._RateLimiterMixin__rate_limiter.close()
+        self._RateLimiterMixin_rate_limiter.close()
 
 
 class PerHostnameRateLimitedSession(RetrySession):

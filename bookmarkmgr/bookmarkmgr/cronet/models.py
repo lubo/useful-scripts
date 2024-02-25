@@ -18,7 +18,7 @@ class Response:
     headers: Message = field(default_factory=Message)
     reason: str = ""
     redirect_url: str = ""
-    status_code: int = None
+    status_code: int | None = None
 
     @property
     def ok(self):

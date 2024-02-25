@@ -1,3 +1,14 @@
+[tool.mypy]
+python_version = "3.11"
+
+[[tool.mypy.overrides]]
+module = [
+    "bookmarkmgr.cronet._cronet",
+    "cffi",
+    "enlighten",
+]
+ignore_missing_imports = true
+
 [tool.poetry]
 name = "bookmarkmgr"
 version = "0.1.0"
