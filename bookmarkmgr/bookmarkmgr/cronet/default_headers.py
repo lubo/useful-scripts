@@ -21,6 +21,6 @@ DEFAULT_HEADERS = (
     ("Sec-Fetch-Mode", "navigate"),
     ("Sec-Fetch-User", "?1"),
     ("Sec-Fetch-Dest", "document"),
-    ("Accept-Encoding", "gzip, deflate, br"),
+    ("Accept-Encoding", "gzip, deflate, br, zstd"),
     ("Accept-Language", "en-US,en;q=0.9"),
 )
