@@ -220,18 +220,18 @@ async def scrape_and_check(session, url):
     return old_html, link_status, error, None
 
 
-async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913
+async def process_scrape_and_check_result(  # noqa: C901, PLR0912
     result_future,
     raindrop,
     metadata,
-    today,
     archival_tasks,
     create_archival_tasks,
 ):
     html, link_status, error, fixed_url = await result_future
+    now = datetime.now(tz=UTC)
     url = raindrop["link"]
 
-    metadata["Last check"] = str(today)
+    metadata["Last check"] = str(now)
 
     if fixed_url is not None:
         logger.info("Fixing URL to %s", fixed_url)
@@ -256,11 +256,11 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913
                 metadata.get("Broken since"),
             ).replace(tzinfo=UTC)
         except (ValueError, TypeError):
-            broken_since = today
+            broken_since = now
             metadata["Broken since"] = str(broken_since)
 
         if link_status == LinkStatus.POSSIBLY_BROKEN and (
-            today >= broken_since + timedelta(days=7)
+            now >= broken_since + timedelta(days=7)
         ):
             link_status = LinkStatus.BROKEN
     else:
@@ -323,7 +323,6 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
         user_options=user_options,
     )
     link = raindrop["link"]
-    today = datetime.now(tz=UTC)
 
     try:
         last_check = datetime.fromisoformat(
@@ -339,7 +338,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
         or "broken" in raindrop["tags"]
         or (
             "possibly-broken" not in raindrop["tags"]
-            and today < last_check + timedelta(days=1)
+            and datetime.now(tz=UTC) < last_check + timedelta(days=1)
         )
     ):
         task_group.create_task(
@@ -347,7 +346,6 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
                 scrape_and_check(check_session, link),
                 raindrop,
                 note_metadata,
-                today,
                 archival_tasks,
                 create_archival_tasks_partial,
             ),
