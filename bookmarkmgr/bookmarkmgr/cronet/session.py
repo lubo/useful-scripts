@@ -16,6 +16,7 @@ from .logging import logger
 from .managers.executor import ExecutorManager
 from .managers.request_callback import RequestCallbackManager
 from .models import RequestParameters, Response
+from .types import Engine, Executor, UrlRequestCallback
 from .utils import adestroying, destroying
 
 INIT_MAX_RETRY_ATTEMPTS = 5
@@ -40,7 +41,7 @@ RETRYABLE_STATUS_CODES = {
 
 class Session:
     def __init__(self) -> None:
-        self._engine = None
+        self._engine: Engine | None = None
 
         self._open()
 
@@ -57,12 +58,15 @@ class Session:
         self.close()
 
     def _dispose_engine(self) -> None:
+        if self._engine is None:
+            return
+
         lib.Cronet_Engine_Destroy(self._engine)
         self._engine = None
 
     def _open(self) -> None:
         if self._engine is not None:
-            return  # type: ignore[unreachable]
+            return
 
         self._engine = lib.Cronet_Engine_Create()
 
@@ -79,6 +83,9 @@ class Session:
             raise
 
     def close(self) -> None:
+        if self._engine is None:
+            return
+
         _raise_for_error_result(lib.Cronet_Engine_Shutdown(self._engine))
         self._dispose_engine()
 
@@ -157,11 +164,11 @@ class Session:
             _raise_for_error_result(
                 lib.Cronet_UrlRequest_InitWithParams(
                     request,
-                    self._engine,
+                    cast(Engine, self._engine),
                     url.encode(),
                     parameters,
-                    callback_manager.callback,
-                    executor_manager.executor,
+                    cast(UrlRequestCallback, callback_manager.callback),
+                    cast(Executor, executor_manager.executor),
                 ),
             )
 

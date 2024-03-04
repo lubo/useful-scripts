@@ -1,7 +1,7 @@
 from collections.abc import Callable
 import contextlib
 from http import HTTPStatus
-from typing import Any, cast, NewType, Self
+from typing import Any, cast, Self
 
 from bookmarkmgr.cronet._cronet import ffi, lib
 from bookmarkmgr.cronet.errors import (
@@ -10,17 +10,22 @@ from bookmarkmgr.cronet.errors import (
     RequestError,
 )
 from bookmarkmgr.cronet.models import RequestParameters, Response
-
-_Buffer = NewType("_Buffer", object)
-_Callback = NewType("_Callback", object)
-_Error = NewType("_Error", object)
-_Request = NewType("_Request", object)
-_ResponseInfo = NewType("_ResponseInfo", object)
+from bookmarkmgr.cronet.types import (
+    Buffer,
+    Result,
+    String,
+    UrlRequest,
+    UrlRequestCallback,
+    UrlResponseInfo,
+)
+from bookmarkmgr.cronet.types import (
+    Error as Error_,
+)
 
 
 def _cancel_request_on_error(
-    result: int,
-    request: _Request,
+    result: Result,
+    request: UrlRequest,
     manager: "RequestCallbackManager",
 ) -> bool:
     try:
@@ -35,7 +40,7 @@ def _cancel_request_on_error(
     return False
 
 
-def _get_manager(callback: _Callback) -> "RequestCallbackManager":
+def _get_manager(callback: UrlRequestCallback) -> "RequestCallbackManager":
     return cast(
         "RequestCallbackManager",
         ffi.from_handle(
@@ -46,7 +51,7 @@ def _get_manager(callback: _Callback) -> "RequestCallbackManager":
 
 def _process_response(
     manager: "RequestCallbackManager",
-    response_info: _ResponseInfo,
+    response_info: UrlResponseInfo,
 ) -> None:
     manager.response.reason = ffi.string(
         lib.Cronet_UrlResponseInfo_http_status_text_get(
@@ -74,12 +79,12 @@ def _process_response(
         ] = ffi.string(lib.Cronet_HttpHeader_value_get(header)).decode()
 
 
-@ffi.def_extern()  # type: ignore[misc]
+@ffi.def_extern()
 def _on_request_redirect_received(
-    callback: _Callback,
-    request: _Request,
-    response_info: _ResponseInfo,
-    new_location_url: str,
+    callback: UrlRequestCallback,
+    request: UrlRequest,
+    response_info: UrlResponseInfo,
+    new_location_url: String,
 ) -> None:
     manager = _get_manager(callback)
     manager.response.redirect_url = ffi.string(new_location_url).decode()
@@ -99,11 +104,11 @@ def _on_request_redirect_received(
     manager.response.url = manager.response.redirect_url
 
 
-@ffi.def_extern()  # type: ignore[misc]
+@ffi.def_extern()
 def _on_request_response_started(
-    callback: _Callback,
-    request: _Request,
-    response_info: _ResponseInfo,
+    callback: UrlRequestCallback,
+    request: UrlRequest,
+    response_info: UrlResponseInfo,
 ) -> None:
     manager = _get_manager(callback)
 
@@ -119,12 +124,12 @@ def _on_request_response_started(
     )
 
 
-@ffi.def_extern()  # type: ignore[misc]
+@ffi.def_extern()
 def _on_request_read_completed(
-    callback: _Callback,
-    request: _Request,
-    response_info: _ResponseInfo,  # noqa: ARG001
-    buffer: _Buffer,
+    callback: UrlRequestCallback,
+    request: UrlRequest,
+    response_info: UrlResponseInfo,  # noqa: ARG001
+    buffer: Buffer,
     bytes_read: int,
 ) -> None:
     manager = _get_manager(callback)
@@ -140,22 +145,22 @@ def _on_request_read_completed(
     )
 
 
-@ffi.def_extern()  # type: ignore[misc]
+@ffi.def_extern()
 def _on_request_succeeded(
-    callback: _Callback,
-    request: _Request,  # noqa: ARG001
-    response_info: _ResponseInfo,  # noqa: ARG001
+    callback: UrlRequestCallback,
+    request: UrlRequest,  # noqa: ARG001
+    response_info: UrlResponseInfo,  # noqa: ARG001
 ) -> None:
     manager = _get_manager(callback)
     manager.on_request_finished()
 
 
-@ffi.def_extern()  # type: ignore[misc]
+@ffi.def_extern()
 def _on_request_failed(
-    callback: _Callback,
-    request: _Request,  # noqa: ARG001
-    response_info: _ResponseInfo,  # noqa: ARG001
-    error: _Error,
+    callback: UrlRequestCallback,
+    request: UrlRequest,  # noqa: ARG001
+    response_info: UrlResponseInfo,  # noqa: ARG001
+    error: Error_,
 ) -> None:
     manager = _get_manager(callback)
     manager.request_error = RequestError(
@@ -171,11 +176,11 @@ def _on_request_failed(
     manager.on_request_finished()
 
 
-@ffi.def_extern()  # type: ignore[misc]
+@ffi.def_extern()
 def _on_request_canceled(
-    callback: _Callback,
-    request: _Request,  # noqa: ARG001
-    response_info: _ResponseInfo,  # noqa: ARG001
+    callback: UrlRequestCallback,
+    request: UrlRequest,  # noqa: ARG001
+    response_info: UrlResponseInfo,  # noqa: ARG001
 ) -> None:
     manager = _get_manager(callback)
     manager.on_request_finished()
@@ -188,7 +193,7 @@ class RequestCallbackManager:
         on_request_finished: Callable[[], None],
     ) -> None:
         self._handle = ffi.new_handle(self)
-        self.callback = None
+        self.callback: UrlRequestCallback | None = None
         self.on_request_finished = on_request_finished
         self.request_parameters = request_parameters
 
@@ -218,5 +223,8 @@ class RequestCallbackManager:
         *args: Any,  # noqa: PYI036
         **kwargs: Any,
     ) -> None:
+        if self.callback is None:
+            return
+
         lib.Cronet_UrlRequestCallback_Destroy(self.callback)
         self.callback = None

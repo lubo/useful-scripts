@@ -1,6 +1,7 @@
 from typing import Any
 
 from ._cronet import lib
+from .types import Result
 
 
 class Error(Exception):
@@ -19,7 +20,7 @@ class RequestError(Error):
     pass
 
 
-def _raise_for_error_result(result: int) -> None:
+def _raise_for_error_result(result: Result) -> None:
     if not isinstance(result, int):
         raise TypeError(result)
 
