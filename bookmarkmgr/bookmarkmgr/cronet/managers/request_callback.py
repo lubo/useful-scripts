@@ -7,6 +7,7 @@ from bookmarkmgr.cronet._cronet import ffi, lib
 from bookmarkmgr.cronet.errors import (
     _raise_for_error_result,
     Error,
+    NotContextManagerError,
     RequestError,
 )
 from bookmarkmgr.cronet.models import RequestParameters, Response
@@ -193,13 +194,13 @@ class RequestCallbackManager:
         on_request_finished: Callable[[], None],
     ) -> None:
         self._handle = ffi.new_handle(self)
-        self.callback: UrlRequestCallback | None = None
+        self._callback: UrlRequestCallback | None = None
         self.on_request_finished = on_request_finished
         self.request_parameters = request_parameters
 
     async def __aenter__(self) -> Self:
-        if self.callback is None:
-            self.callback = lib.Cronet_UrlRequestCallback_CreateWith(
+        if self._callback is None:
+            self._callback = lib.Cronet_UrlRequestCallback_CreateWith(
                 lib._on_request_redirect_received,  # noqa: SLF001
                 lib._on_request_response_started,  # noqa: SLF001
                 lib._on_request_read_completed,  # noqa: SLF001
@@ -208,7 +209,7 @@ class RequestCallbackManager:
                 lib._on_request_canceled,  # noqa: SLF001
             )
             lib.Cronet_UrlRequestCallback_SetClientContext(
-                self.callback,
+                self._callback,
                 self._handle,
             )
 
@@ -223,8 +224,15 @@ class RequestCallbackManager:
         *args: Any,  # noqa: PYI036
         **kwargs: Any,
     ) -> None:
-        if self.callback is None:
+        if self._callback is None:
             return
 
-        lib.Cronet_UrlRequestCallback_Destroy(self.callback)
-        self.callback = None
+        lib.Cronet_UrlRequestCallback_Destroy(self._callback)
+        self._callback = None
+
+    @property
+    def callback(self) -> UrlRequestCallback:
+        if self._callback is None:
+            raise NotContextManagerError
+
+        return self._callback

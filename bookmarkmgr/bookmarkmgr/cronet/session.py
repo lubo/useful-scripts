@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from contextlib import nullcontext
 from http import HTTPStatus
-from typing import Any, cast, Self
+from typing import Any, Self, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from yarl import URL
@@ -11,13 +11,20 @@ from bookmarkmgr.asyncio import RateLimiter, RateLimiterMixin
 
 from ._cronet import lib
 from .default_headers import DEFAULT_HEADERS
-from .errors import _raise_for_error_result, Error, RequestError
+from .errors import (
+    _raise_for_error_result,
+    Error,
+    NotContextManagerError,
+    RequestError,
+)
 from .logging import logger
 from .managers.executor import ExecutorManager
 from .managers.request_callback import RequestCallbackManager
 from .models import RequestParameters, Response
-from .types import Engine, Executor, UrlRequestCallback
 from .utils import adestroying, destroying
+
+if TYPE_CHECKING:
+    from .types import Engine
 
 INIT_MAX_RETRY_ATTEMPTS = 5
 
@@ -42,8 +49,6 @@ RETRYABLE_STATUS_CODES = {
 class Session:
     def __init__(self) -> None:
         self._engine: Engine | None = None
-
-        self._open()
 
     async def __aenter__(self) -> Self:
         self._open()
@@ -117,6 +122,9 @@ class Session:
         params: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Response:
+        if self._engine is None:
+            raise NotContextManagerError
+
         if params is not None:
             url = str(URL(url).update_query(params))
 
@@ -164,11 +172,11 @@ class Session:
             _raise_for_error_result(
                 lib.Cronet_UrlRequest_InitWithParams(
                     request,
-                    cast(Engine, self._engine),
+                    self._engine,
                     url.encode(),
                     parameters,
-                    cast(UrlRequestCallback, callback_manager.callback),
-                    cast(Executor, executor_manager.executor),
+                    callback_manager.callback,
+                    executor_manager.executor,
                 ),
             )
 
@@ -345,8 +353,14 @@ class PerHostnameRateLimitedSession(RetrySession):
         *args: Any,
         **kwargs: Any,
     ) -> Response:
+        parsed_url = urlparse(url)
+
+        if parsed_url.hostname is None:
+            message = "Missing hostname in the URL"
+            raise ValueError(message)
+
         async with self.__rate_limiters.get(
-            cast(str, urlparse(url).hostname).lower(),
+            parsed_url.hostname.lower(),
             self.__null_context,
         ):
             return await super()._request(method, url, *args, **kwargs)

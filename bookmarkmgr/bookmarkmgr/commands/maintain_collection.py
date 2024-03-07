@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
-from typing import Any, cast
+from typing import Any
 
 import enlighten
 
@@ -270,7 +270,9 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
         raindrop["link"] = url = fixed_url
 
     if link_status == LinkStatus.OK:
-        page = cast(scraper.Page, page)
+        if page is None:
+            message = "Page is None"
+            raise ValueError(message)
 
         if (
             canonical_url := get_canonical_url(

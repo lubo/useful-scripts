@@ -2,7 +2,6 @@ from collections.abc import Awaitable
 from enum import IntEnum, unique
 from http import HTTPStatus
 import re
-from typing import cast
 from urllib.parse import ParseResult, quote, urlparse
 
 from bookmarkmgr.cronet import RequestError, Response
@@ -45,7 +44,9 @@ async def check_link_status(
 
     match response.status_code:
         case HTTPStatus.OK.value:
-            page = cast(Page, page)
+            if page is None:
+                message = "Page is None"
+                raise ValueError(message)
 
             if page.title == "Video deleted":
                 link_status = LinkStatus.BROKEN
