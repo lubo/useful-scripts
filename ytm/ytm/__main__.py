@@ -53,7 +53,7 @@ def download_library(client):
         {
             "format": "141",
             "http_headers": {
-                "Authorization": client.headers["Authorization"],
+                "Authorization": client.headers["authorization"],
             },
             "paths": {
                 "home": str(dest_dir),
