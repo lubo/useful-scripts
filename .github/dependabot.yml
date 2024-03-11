@@ -10,7 +10,46 @@ updates:
           - version-update:semver-minor
           - version-update:semver-patch
   - package-ecosystem: pip
+    directory: /bookmarkmgr
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
+    # Makes it possible to have another config. for the same dir.
+    # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
+    target-branch: master
+  - package-ecosystem: pip
     directory: /bookmarks4diff
+    schedule:
+      interval: daily
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+  - package-ecosystem: pip
+    directory: /bookmarks4diff
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
+    # Makes it possible to have another config. for the same dir.
+    # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
+    target-branch: master
+  - package-ecosystem: pip
+    directory: /ytm
     schedule:
       interval: daily
     ignore:
@@ -21,9 +60,15 @@ updates:
   - package-ecosystem: pip
     directory: /ytm
     schedule:
-      interval: daily
+      interval: monthly
+    groups:
+      all:
+        patterns:
+          - '*'
     ignore:
       - dependency-name: '*'
         update-types:
-          - version-update:semver-minor
-          - version-update:semver-patch
+          - version-update:semver-major
+    # Makes it possible to have another config. for the same dir.
+    # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
+    target-branch: master
