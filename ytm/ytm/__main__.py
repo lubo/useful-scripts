@@ -119,20 +119,22 @@ def sync_playlist(client, playlist_id):
 
     if to_add := [s for s in library_songs if s not in playlist_songs]:
         for song_id in to_add:
+            formatted_entry = format_song_entry(
+                get_song_entry(library_songs[song_id]),
+            )
             print(  # noqa: T201
-                'Adding "{}"'.format(
-                    format_song_entry(get_song_entry(library_songs[song_id])),
-                ),
+                f'Adding "{formatted_entry}"',
             )
 
         client.add_playlist_items(playlist_id, to_add)
 
     if to_remove := playlist_songs.keys() - library_songs.keys():
         for song_id in to_remove:
+            formatted_entry = format_song_entry(
+                get_song_entry(playlist_songs[song_id]),
+            )
             print(  # noqa: T201
-                'Removing "{}"'.format(
-                    format_song_entry(get_song_entry(playlist_songs[song_id])),
-                ),
+                f'Removing "{formatted_entry}"',
             )
 
         client.remove_playlist_items(
