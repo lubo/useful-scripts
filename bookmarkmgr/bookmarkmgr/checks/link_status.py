@@ -59,14 +59,6 @@ async def check_link_status(
             ) is not None:
                 link_status = LinkStatus.BROKEN
                 error = match.group(1)
-            elif (
-                match := re.fullmatch(
-                    r"(Video Disabled) - [a-zA-Z]{7}\.[a-z]{3}",
-                    page.title,
-                )
-            ) is not None:
-                link_status = LinkStatus.POSSIBLY_BROKEN
-                error = match.group(1)
         case HTTPStatus.UNAUTHORIZED.value | HTTPStatus.FORBIDDEN.value:
             link_status = LinkStatus.BLOCKED
 
