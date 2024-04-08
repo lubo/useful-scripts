@@ -167,3 +167,6 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             return await self._archive_page(url)
         except ClientError as error:
             raise WaybackMachineError(error) from error
+        except TimeoutError as error:
+            message = "Connection timed out"
+            raise WaybackMachineError(message) from error
