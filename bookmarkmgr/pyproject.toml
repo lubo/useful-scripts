@@ -31,7 +31,7 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
-aiohttp = "^3.9.3"
+aiohttp = "^3.9.4"
 aiohttp-retry = {git = "https://github.com/inyutin/aiohttp_retry.git"}
 cffi = "^1.16.0"
 enlighten = "^1.12.4"
