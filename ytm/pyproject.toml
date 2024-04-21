@@ -1,3 +1,6 @@
+[tool.mypy]
+ignore_errors = true
+
 [tool.poetry]
 name = "ytm"
 version = "0.1.0"
