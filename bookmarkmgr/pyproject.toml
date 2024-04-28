@@ -10,7 +10,7 @@ explicit_package_bases = true
 extra_checks = true
 no_implicit_reexport = true
 python_executable = "${VIRTUAL_ENV}/bin/python"
-python_version = "3.11"
+python_version = "3.12"
 strict_equality = true
 warn_redundant_casts = true
 warn_return_any = true
@@ -36,7 +36,7 @@ aiohttp-retry = {git = "https://github.com/inyutin/aiohttp_retry.git"}
 cffi = "^1.16.0"
 enlighten = "^1.12.4"
 overrides = "^7.7.0"
-python = "^3.11"
+python = "^3.12"
 yarl = "^1.9.4"
 
 # https://github.com/python-poetry/poetry/issues/2740
@@ -48,7 +48,7 @@ bookmarkmgr = "bookmarkmgr.__main__:main"
 
 [tool.ruff]
 line-length = 79
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -69,5 +69,6 @@ order-by-type = false
 requires = [
     "cffi",
     "poetry-core",
+    "setuptools",
 ]
 build-backend = "poetry.core.masonry.api"

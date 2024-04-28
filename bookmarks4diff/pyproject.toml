@@ -5,12 +5,12 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 pyyaml = "^6.0.1"
 
 [tool.ruff]
 line-length = 79
-target-version = "py311"
+target-version = "py312"
 
 [tool.poetry.scripts]
 bookmarks4diff = "bookmarks4diff.__main__:main"

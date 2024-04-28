@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Literal, NewType, TypeAlias
+from typing import Any, Literal, NewType
 
 from .types import (
     Buffer,
@@ -18,29 +18,32 @@ from .types import (
     UrlResponseInfo,
 )
 
-_Executor_Execute: TypeAlias = Callable[[Executor, Runnable], None]
+type _Executor_Execute = Callable[  # type: ignore[valid-type]
+    [Executor, Runnable],
+    None,
+]
 
-_UrlRequestCallback_OnCanceledFunc: TypeAlias = Callable[
+type _UrlRequestCallback_OnCanceledFunc = Callable[  # type: ignore[valid-type]
     [UrlRequestCallback, UrlRequest, UrlResponseInfo],
     None,
 ]
-_UrlRequestCallback_OnFailedFunc: TypeAlias = Callable[
+type _UrlRequestCallback_OnFailedFunc = Callable[  # type: ignore[valid-type]
     [UrlRequestCallback, UrlRequest, UrlResponseInfo, Error],
     None,
 ]
-_UrlRequestCallback_OnReadCompletedFunc: TypeAlias = Callable[
+type _UrlRequestCallback_OnReadCompletedFunc = Callable[  # type: ignore[valid-type]
     [UrlRequestCallback, UrlRequest, UrlResponseInfo, Buffer, int],
     None,
 ]
-_UrlRequestCallback_OnRedirectReceivedFunc: TypeAlias = Callable[
+type _UrlRequestCallback_OnRedirectReceivedFunc = Callable[  # type: ignore[valid-type]
     [UrlRequestCallback, UrlRequest, UrlResponseInfo, String],
     None,
 ]
-_UrlRequestCallback_OnResponseStartedFunc: TypeAlias = Callable[
+type _UrlRequestCallback_OnResponseStartedFunc = Callable[  # type: ignore[valid-type]
     [UrlRequestCallback, UrlRequest, UrlResponseInfo],
     None,
 ]
-_UrlRequestCallback_OnSucceededFunc: TypeAlias = Callable[
+type _UrlRequestCallback_OnSucceededFunc = Callable[  # type: ignore[valid-type]
     [UrlRequestCallback, UrlRequest, UrlResponseInfo],
     None,
 ]
