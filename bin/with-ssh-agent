@@ -5,6 +5,19 @@
 
 set -e
 
+# shellcheck disable=SC2016
+EXPECT_SCRIPT='
+trap {
+	global spawn_out
+	set rows [stty rows]
+	set cols [stty columns]
+	stty rows $rows columns $cols < $spawn_out(slave,name)
+} WINCH
+spawn -noecho "$env(SHELL)" -i
+send "PS1=\"(ssh-agent) \${PS1}\"\n"
+interact
+'
+
 main() {
 	if [[ ! "${SSH_AGENT_PID}" ]]; then
 		exec ssh-agent -- "$0" "$@"
@@ -17,19 +30,6 @@ main() {
 	fi
 
 	: "${SHELL:?}"
-
-	EXPECT_SCRIPT="$(cat <<-EOF
-	trap {
-		global spawn_out
-		set rows [stty rows]
-		set cols [stty columns]
-		stty rows \$rows columns \$cols < \$spawn_out(slave,name)
-	} WINCH
-	spawn -noecho "${SHELL}" -i
-	send "PS1=\"(ssh-agent) \\\${PS1}\"\n"
-	interact
-	EOF
-	)"
 
 	exec expect -c "${EXPECT_SCRIPT}"
 }

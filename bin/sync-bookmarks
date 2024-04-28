@@ -24,7 +24,7 @@ commit_changes() {
 
 	git add "${BOOKMARK_DATABASE_PATH}"
 
-	with-ssh-agent git commit -m "Update database" > /dev/null
+	with-ssh-agent git commit -m "Update database" >/dev/null
 
 	echo "Bookmark database updated. Don't forget to push after reviewing" \
 		"the changes."
@@ -46,10 +46,10 @@ export_bookmarks() {
 
 	git checkout -fq master
 	__bookmarkmgr export-collection "${BOOKMARK_RAINDROP_COLLECTION}" \
-		> "${BOOKMARK_DATABASE_PATH}"
+		>"${BOOKMARK_DATABASE_PATH}"
 	commit_changes
 
-	cd - > /dev/null
+	cd - >/dev/null
 }
 
 main() {

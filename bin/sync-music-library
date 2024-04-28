@@ -19,7 +19,7 @@ commit_changes() {
 
 	git add "${MUSIC_LIBRARY_DATABASE_PATH}"
 
-	with-ssh-agent git commit -m "Update database" > /dev/null
+	with-ssh-agent git commit -m "Update database" >/dev/null
 
 	echo "Library database updated. Don't forget to push after reviewing" \
 		"the changes."
@@ -37,10 +37,10 @@ main() {
 		cd "$(dirname "${MUSIC_LIBRARY_DATABASE_PATH}")"
 
 		git checkout -fq master
-		__ytm export-library > "${MUSIC_LIBRARY_DATABASE_PATH}"
+		__ytm export-library >"${MUSIC_LIBRARY_DATABASE_PATH}"
 		commit_changes
 
-		cd - > /dev/null
+		cd - >/dev/null
 	elif [ -n "${MUSIC_LIBRARY_DATABASE_PATH}" ]; then
 		echo "${MUSIC_LIBRARY_DATABASE_PATH}: Not a file" >&2
 	else

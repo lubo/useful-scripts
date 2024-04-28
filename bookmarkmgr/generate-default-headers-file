@@ -4,14 +4,12 @@ set -eo pipefail
 
 cd "$(dirname "$0")"
 
-echo -e "# ruff: noqa: E501\n\nDEFAULT_HEADERS = $(./dump-headers.py)" \
-	| ruff format - \
-	> bookmarkmgr/cronet/default_headers.py \
-	&
+echo -e "# ruff: noqa: E501\n\nDEFAULT_HEADERS = $(./dump-headers.py)" |
+	ruff format - >bookmarkmgr/cronet/default_headers.py &
 
 google-chrome-stable \
 	--incognito \
 	http://127.0.0.1:8080/ \
-	> /dev/null 2>&1
+	>/dev/null 2>&1
 
 wait
