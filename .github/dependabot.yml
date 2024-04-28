@@ -17,6 +17,8 @@ updates:
       all:
         patterns:
           - '*'
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
@@ -41,6 +43,8 @@ updates:
       all:
         patterns:
           - '*'
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
@@ -65,6 +69,8 @@ updates:
       all:
         patterns:
           - '*'
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
@@ -89,6 +95,8 @@ updates:
       all:
         patterns:
           - '*'
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
