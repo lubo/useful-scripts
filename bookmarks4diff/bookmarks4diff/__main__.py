@@ -44,7 +44,7 @@ def parse_bookmarks(html):
                 case "last_modified":
                     continue
                 case "tags":
-                    value = value.split(",")
+                    value = list(filter(len, value.split(",")))
 
             item[name] = value
 
