@@ -4,6 +4,8 @@ updates:
     directory: /
     schedule:
       interval: daily
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
@@ -30,6 +32,8 @@ updates:
     directory: /bookmarkmgr
     schedule:
       interval: daily
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
@@ -56,6 +60,8 @@ updates:
     directory: /bookmarks4diff
     schedule:
       interval: daily
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
@@ -82,6 +88,8 @@ updates:
     directory: /ytm
     schedule:
       interval: daily
+    allow:
+      - dependency-type: all
     ignore:
       - dependency-name: '*'
         update-types:
