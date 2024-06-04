@@ -39,6 +39,9 @@ overrides = "^7.7.0"
 python = "^3.12"
 yarl = "^1.9.4"
 
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.10.1"
+
 # https://github.com/python-poetry/poetry/issues/2740
 [tool.poetry.build]
 script = "build.py"

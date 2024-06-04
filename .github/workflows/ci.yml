@@ -2,8 +2,8 @@ name: CI
 on: push
 permissions: { }
 jobs:
-  lint:
-    name: Lint
+  lint-all:
+    name: Lint - All
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,7 +18,20 @@ jobs:
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_PYTHON_ISORT: false
-          # TODO: Enable mypy when per-directory configuration is supported.
-          # https://github.com/python/mypy/issues/16070
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYLINT: false
+  lint-bookmarkmgr:
+    name: Lint - bookmarkmgr
+    # ubuntu-latest is still Ubuntu 22.04, which uses ancient Poetry version.
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: bookmarkmgr
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y --no-install-recommends python3-poetry
+      - name: Don't build native modules
+        run: echo > build.py
+      - run: poetry install
+      - run: poetry run mypy .
