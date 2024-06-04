@@ -2,8 +2,8 @@ name: CI
 on: push
 permissions: { }
 jobs:
-  lint:
-    name: Lint
+  lint-all:
+    name: Lint - All
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,3 +22,28 @@ jobs:
           # https://github.com/python/mypy/issues/16070
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYLINT: false
+  lint-bookmarkmgr:
+    name: Lint - bookmarkmgr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Move bookmarkmgr contents to the workspace root
+        run: |
+          mv .git* bookmarkmgr
+          mv bookmarkmgr ..
+          cd ..
+          rm -rf "${GITHUB_WORKSPACE}"
+          mv bookmarkmgr "${GITHUB_WORKSPACE}"
+      - uses: super-linter/super-linter/slim@v6.5.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHON_MYPY_CONFIG_FILE: ../../../${GITHUB_WORKSPACE}/pyproject.toml
+          USE_FIND_ALGORITHM: true
+          VIRTUAL_ENV: /usr/local
+          # https://github.com/python/mypy/issues/16070
+          VALIDATE_PYTHON_MYPY: true
