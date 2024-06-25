@@ -29,7 +29,10 @@ updates:
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
   - package-ecosystem: pip
-    directory: /bookmarkmgr
+    directories:
+      - /bookmarkmgr
+      - /bookmarks4diff
+      - /ytm
     schedule:
       interval: daily
     allow:
@@ -40,63 +43,10 @@ updates:
           - version-update:semver-minor
           - version-update:semver-patch
   - package-ecosystem: pip
-    directory: /bookmarkmgr
-    schedule:
-      interval: monthly
-    groups:
-      all:
-        patterns:
-          - '*'
-    allow:
-      - dependency-type: all
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-major
-    # Makes it possible to have another config. for the same dir.
-    # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
-    target-branch: master
-  - package-ecosystem: pip
-    directory: /bookmarks4diff
-    schedule:
-      interval: daily
-    allow:
-      - dependency-type: all
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-minor
-          - version-update:semver-patch
-  - package-ecosystem: pip
-    directory: /bookmarks4diff
-    schedule:
-      interval: monthly
-    groups:
-      all:
-        patterns:
-          - '*'
-    allow:
-      - dependency-type: all
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-major
-    # Makes it possible to have another config. for the same dir.
-    # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
-    target-branch: master
-  - package-ecosystem: pip
-    directory: /ytm
-    schedule:
-      interval: daily
-    allow:
-      - dependency-type: all
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-minor
-          - version-update:semver-patch
-  - package-ecosystem: pip
-    directory: /ytm
+    directories:
+      - /bookmarkmgr
+      - /bookmarks4diff
+      - /ytm
     schedule:
       interval: monthly
     groups:
