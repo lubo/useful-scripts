@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+# Workaround for:
+# https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator/issues/459
+
+set -e
+
+rm ~/.cache/clipboard-indicator@tudmotu.com/registry.txt
+
+gnome-extensions disable clipboard-indicator@tudmotu.com
+gnome-extensions enable clipboard-indicator@tudmotu.com
