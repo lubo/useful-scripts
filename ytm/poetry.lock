@@ -500,13 +500,13 @@ files = [
 
 [[package]]
 name = "yt-dlp"
-version = "2024.7.7"
+version = "2024.8.1"
 description = "A feature-rich command-line audio/video downloader"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "yt_dlp-2024.7.7-py3-none-any.whl", hash = "sha256:2e90abeadc0199c787b1b4a3e0a1c8ed9d7c9f824f58da88467a1b30ed745e07"},
-    {file = "yt_dlp-2024.7.7.tar.gz", hash = "sha256:2a0f89423d25d47db949925db5bd2c6f651960ae93dbbf5b3ed61cf3a4078ce5"},
+    {file = "yt_dlp-2024.8.1-py3-none-any.whl", hash = "sha256:d0d927038e30a05f6eab26ff6189628456ea21bb159a3d9dc2e855eef2810eac"},
+    {file = "yt_dlp-2024.8.1.tar.gz", hash = "sha256:4318aa523694611562f01419c8d526b662a72df34ef8ba454016b34c8366c158"},
 ]
 
 [package.dependencies]
@@ -520,8 +520,8 @@ urllib3 = ">=1.26.17,<3"
 websockets = ">=12.0"
 
 [package.extras]
-build = ["build", "hatchling", "pip", "setuptools", "wheel"]
-curl-cffi = ["curl-cffi (==0.5.10)"]
+build = ["build", "hatchling", "pip", "setuptools (>=71.0.2)", "wheel"]
+curl-cffi = ["curl-cffi (==0.5.10)", "curl-cffi (>=0.5.10,<0.6.dev0 || ==0.7.*)"]
 dev = ["autopep8 (>=2.0,<3.0)", "pre-commit", "pytest (>=8.1,<9.0)", "ruff (>=0.5.0,<0.6.0)"]
 py2exe = ["py2exe (>=0.12)"]
 pyinstaller = ["pyinstaller (>=6.7.0)"]
@@ -531,13 +531,13 @@ test = ["pytest (>=8.1,<9.0)"]
 
 [[package]]
 name = "ytmusicapi"
-version = "1.7.3"
+version = "1.8.0"
 description = "Unofficial API for YouTube Music"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "ytmusicapi-1.7.3-py3-none-any.whl", hash = "sha256:248c258df62e4afb360c4bca16762e4653fa08f15c8f295e673e01bfd062e159"},
-    {file = "ytmusicapi-1.7.3.tar.gz", hash = "sha256:63de01e6b8729cc3ee1a09650c9ec6e4932857b577dd90724ae2e770fbd88d50"},
+    {file = "ytmusicapi-1.8.0-py3-none-any.whl", hash = "sha256:b4a73991e8bcaf9537b6245712734303725ddd435768000ec5dd45fa993f26ee"},
+    {file = "ytmusicapi-1.8.0.tar.gz", hash = "sha256:8b2bec6a4615f5144fc5f2daaeaab3cd059b602d916f323ef72b7d71b1e21f95"},
 ]
 
 [package.dependencies]
@@ -546,4 +546,4 @@ requests = ">=2.22"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "c416223458201cf0bee1cbb335f56107f72c9c2ea09fd4e6ec80409b80319db8"
+content-hash = "294ee52ec9db8f277bc40b5ce42bb33fcc68b06a1e3875a538748932e7520478"
