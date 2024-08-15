@@ -7,7 +7,7 @@ updates:
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
@@ -18,11 +18,11 @@ updates:
     groups:
       all:
         patterns:
-          - '*'
+          - "*"
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-major
     # Makes it possible to have another config. for the same dir.
@@ -35,7 +35,7 @@ updates:
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
@@ -46,11 +46,11 @@ updates:
     groups:
       all:
         patterns:
-          - '*'
+          - "*"
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-major
     # Makes it possible to have another config. for the same dir.
@@ -63,7 +63,7 @@ updates:
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
@@ -74,11 +74,11 @@ updates:
     groups:
       all:
         patterns:
-          - '*'
+          - "*"
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-major
     # Makes it possible to have another config. for the same dir.
@@ -91,7 +91,7 @@ updates:
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
@@ -102,11 +102,11 @@ updates:
     groups:
       all:
         patterns:
-          - '*'
+          - "*"
     allow:
       - dependency-type: all
     ignore:
-      - dependency-name: '*'
+      - dependency-name: "*"
         update-types:
           - version-update:semver-major
     # Makes it possible to have another config. for the same dir.

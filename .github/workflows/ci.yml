@@ -1,6 +1,6 @@
 name: CI
 on: push
-permissions: { }
+permissions: {}
 jobs:
   lint-all:
     name: Lint - All
