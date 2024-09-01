@@ -12,13 +12,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: super-linter/super-linter/slim@v7.0.0
+      - uses: super-linter/super-linter/slim@v7.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_PYTHON_ISORT: false
           VALIDATE_PYTHON_MYPY: false
+          VALIDATE_PYTHON_PYINK: false
           VALIDATE_PYTHON_PYLINT: false
   lint-bookmarkmgr:
     name: Lint - bookmarkmgr
