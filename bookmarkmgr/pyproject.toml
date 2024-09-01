@@ -31,16 +31,16 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
-aiohttp = "^3.10.3"
+aiohttp = "^3.10.5"
 aiohttp-retry = {git = "https://github.com/inyutin/aiohttp_retry.git"}
 cffi = "^1.17.0"
 enlighten = "^1.12.4"
 overrides = "^7.7.0"
 python = "^3.12"
-yarl = "^1.9.4"
+yarl = "^1.9.6"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.11.1"
+mypy = "^1.11.2"
 
 # https://github.com/python-poetry/poetry/issues/2740
 [tool.poetry.build]
