@@ -108,6 +108,10 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
 
     async def archive_page(self, url: str) -> tuple[str | None, str | None]:
         try:
-            return await self._archive_page(url)
+            async with asyncio.timeout(1800):
+                return await self._archive_page(url)
         except CronetError as error:
             raise ArchiveTodayError(error) from error
+        except TimeoutError as error:
+            message = "Operation timed out"
+            raise ArchiveTodayError(message) from error
