@@ -44,7 +44,7 @@ class WaybackMachineClient(ClientSessionContextManagerMixin):
             start_timeout=30,
         )
 
-    async def _archive_page(  # noqa: C901
+    async def _archive_page(  # noqa: C901, PLR0912
         self,
         url: str,
     ) -> tuple[str | None, str | None]:

@@ -76,8 +76,10 @@ class DuplicateLinkChecker:
             ):
                 continue
 
-            if link < self._original_links[queryless_url]:
-                self._original_links[queryless_url] = link
+            self._original_links[queryless_url] = min(
+                link,
+                self._original_links[queryless_url],
+            )
 
         self._all_links_received.set()
 

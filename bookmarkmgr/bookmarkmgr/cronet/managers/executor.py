@@ -13,7 +13,7 @@ from bookmarkmgr.cronet.types import Executor, Runnable
 
 @ffi.def_extern()
 def _executor_execute(executor: Executor, runnable: Runnable) -> None:
-    manager: "ExecutorManager" = ffi.from_handle(
+    manager: ExecutorManager = ffi.from_handle(
         lib.Cronet_Executor_GetClientContext(executor),
     )
     manager.enqueue_runnable(runnable)

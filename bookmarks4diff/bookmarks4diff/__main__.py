@@ -20,7 +20,7 @@ sys.path.append(
 from bookmarkmgr.utils.link_metadata import metadata_from_note
 
 
-def parse_bookmarks(html):
+def parse_bookmarks(html):  # noqa: C901
     current_tag = None
     items = []
 
