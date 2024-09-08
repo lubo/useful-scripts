@@ -105,7 +105,7 @@ async def process_archival_result(
     try:
         archival_url, error = await result_awaitable
     except (ArchiveTodayError, WaybackMachineError) as e:
-        logger.error("Archival failed: %s", e)
+        logger.error("Archival of %s failed: %s", raindrop["link"], e)
         return
 
     if error is None:
