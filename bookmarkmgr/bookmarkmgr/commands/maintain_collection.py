@@ -102,25 +102,29 @@ async def process_archival_result(
     service_initials: str,
     service_name: str,
 ) -> None:
+    error: Exception | str | None
+
     try:
         archival_url, error = await result_awaitable
     except (ArchiveTodayError, WaybackMachineError) as e:
-        logger.error("Archival of %s failed: %s", raindrop["link"], e)
-        return
+        error = e
 
     if error is None:
         metadata[f"Archive ({service_initials})"] = f"[link]({archival_url})"
         tag = "archived"
     else:
-        metadata[f"Archival Error ({service_initials})"] = error
-        tag = "archival-failed"
-
         logger.error(
             "Archival in %s failed: %s: %s",
             service_name,
             error,
             raindrop["link"],
         )
+
+        if isinstance(error, Exception):
+            return
+
+        metadata[f"Archival Error ({service_initials})"] = error
+        tag = "archival-failed"
 
     if tag in raindrop["tags"]:
         return
