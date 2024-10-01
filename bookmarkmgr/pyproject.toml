@@ -33,11 +33,11 @@ authors = []
 [tool.poetry.dependencies]
 aiohttp = "^3.10.5"
 aiohttp-retry = {git = "https://github.com/inyutin/aiohttp_retry.git"}
-cffi = "^1.17.0"
+cffi = "^1.17.1"
 enlighten = "^1.12.4"
 overrides = "^7.7.0"
 python = "^3.12"
-yarl = "^1.9.6"
+yarl = "^1.13.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.11.2"
