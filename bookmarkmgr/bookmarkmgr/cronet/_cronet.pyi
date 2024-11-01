@@ -18,32 +18,32 @@ from .types import (
     UrlResponseInfo,
 )
 
-type _Executor_Execute = Callable[  # type: ignore[valid-type]
+type _Executor_Execute = Callable[
     [Executor, Runnable],
     None,
 ]
 
-type _UrlRequestCallback_OnCanceledFunc = Callable[  # type: ignore[valid-type]
+type _UrlRequestCallback_OnCanceledFunc = Callable[
     [UrlRequestCallback, UrlRequest, UrlResponseInfo],
     None,
 ]
-type _UrlRequestCallback_OnFailedFunc = Callable[  # type: ignore[valid-type]
+type _UrlRequestCallback_OnFailedFunc = Callable[
     [UrlRequestCallback, UrlRequest, UrlResponseInfo, Error],
     None,
 ]
-type _UrlRequestCallback_OnReadCompletedFunc = Callable[  # type: ignore[valid-type]
+type _UrlRequestCallback_OnReadCompletedFunc = Callable[
     [UrlRequestCallback, UrlRequest, UrlResponseInfo, Buffer, int],
     None,
 ]
-type _UrlRequestCallback_OnRedirectReceivedFunc = Callable[  # type: ignore[valid-type]
+type _UrlRequestCallback_OnRedirectReceivedFunc = Callable[
     [UrlRequestCallback, UrlRequest, UrlResponseInfo, String],
     None,
 ]
-type _UrlRequestCallback_OnResponseStartedFunc = Callable[  # type: ignore[valid-type]
+type _UrlRequestCallback_OnResponseStartedFunc = Callable[
     [UrlRequestCallback, UrlRequest, UrlResponseInfo],
     None,
 ]
-type _UrlRequestCallback_OnSucceededFunc = Callable[  # type: ignore[valid-type]
+type _UrlRequestCallback_OnSucceededFunc = Callable[
     [UrlRequestCallback, UrlRequest, UrlResponseInfo],
     None,
 ]
