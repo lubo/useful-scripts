@@ -17,6 +17,8 @@ from .commands.maintain_collection import (
     MaintainCollectionOptions,
 )
 
+_HOST_RATE_LIMIT_NARGS = 3
+
 
 def _sigint_handler(
     signum: int,  # noqa: ARG001
@@ -31,7 +33,7 @@ def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
     def parse(value: str) -> float | int | str:
         nonlocal index
 
-        index += 1
+        index = (index + 1) % _HOST_RATE_LIMIT_NARGS
 
         match index:
             case 1:
@@ -99,7 +101,7 @@ def main() -> None:
         dest="host_rate_limits",
         help="Sets rate limit for a hostname during link checks",
         metavar=("hostname", "limit", "period"),
-        nargs=3,
+        nargs=_HOST_RATE_LIMIT_NARGS,
         type=_host_rate_limits_parser(),
     )
     maintain_collection_parser.add_argument(
