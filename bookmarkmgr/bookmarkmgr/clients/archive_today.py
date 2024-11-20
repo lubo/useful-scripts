@@ -39,37 +39,40 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
         )
 
     async def _archive_page(self, url: str) -> tuple[str | None, str | None]:
-        response = await self._session.get(
-            "https://archive.ph/submit/",
-            allow_redirects=False,
-            params={
+        request_params = {
+            "url": "https://archive.ph/submit/",
+            "params": {
                 "url": url,
             },
-        )
-
-        if response.status_code == HTTPStatus.OK.value:
-            if "Refresh" not in response.headers:
-                return None, _extract_text(response.text)
-
-            refresh_header = response.headers["Refresh"]
-            try:
-                _, wip_url = refresh_header.split("=", 1)
-            except ValueError as error:
-                message = (
-                    f"Malformed Refresh header: '{refresh_header}': "
-                    f"{response.url}"
-                )
-                raise ArchiveTodayError(message) from error
-
-            logger.debug("Successfully submitted %s", url)
+        }
+        submitted = False
 
         start_delay = 5
         delay_factor = 0
 
         for attempt in itertools.count():
+            response = await self._session.get(
+                **request_params,
+                allow_redirects=False,
+            )
+
             match response.status_code:
                 case HTTPStatus.OK.value:
-                    pass
+                    if not submitted:
+                        refresh_header = response.headers.get("Refresh")
+
+                        if refresh_header is None:
+                            return None, _extract_text(response.text)
+
+                        refresh_parts = refresh_header.split("=", 1)
+
+                        if len(refresh_parts) > 1:
+                            request_params = {
+                                "url": refresh_parts[1],
+                            }
+                            submitted = True
+
+                            logger.debug("Successfully submitted %s", url)
                 case HTTPStatus.FOUND.value:
                     break
                 case _:
@@ -96,11 +99,6 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin):
                 await asyncio.sleep(delay)
             else:
                 delay_factor = 1
-
-            response = await self._session.get(
-                wip_url,
-                allow_redirects=False,
-            )
 
         logger.info("Archived %s", url)
 
