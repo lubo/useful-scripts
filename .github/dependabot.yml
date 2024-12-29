@@ -11,6 +11,8 @@ updates:
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
+    commit-message:
+      prefix: CI
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -25,6 +27,8 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+    commit-message:
+      prefix: CI
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
