@@ -3,12 +3,15 @@
 
 import argparse
 import csv
+from getpass import getpass
+import json
 import operator
 from pathlib import Path
 import sys
 
 from yt_dlp import YoutubeDL
 from ytmusicapi import YTMusic
+from ytmusicapi.auth.oauth import OAuthCredentials
 
 GET_LIMIT = None
 
@@ -146,8 +149,12 @@ def sync_playlist(client, playlist_id):
 def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
-        "credentials",
-        help="File containing OAuth credentials",
+        "oauth_client_id",
+        help="OAuth Client ID",
+    )
+    arg_parser.add_argument(
+        "user_credentials",
+        help="File containing user OAuth credentials",
         type=argparse.FileType(),
     )
     subparsers = arg_parser.add_subparsers(dest="command", required=True)
@@ -170,10 +177,27 @@ def main():
 
     args = arg_parser.parse_args()
 
-    # Only regular files are supported, not symlinks like /dev/stdin, etc.
-    # https://github.com/sigma67/ytmusicapi/blob/56d54a2b50f242abe812cd8214b31ede98cb1d01/ytmusicapi/auth/headers.py#L14C9-L14C9
-    with args.credentials:
-        client = YTMusic(args.credentials.read())
+    with args.user_credentials:
+        user_credentials = json.loads(args.user_credentials.read())
+
+    try:
+        oauth_client_secret = (
+            getpass("OAuth Client Secret: ") if sys.stdin.isatty() else input()
+        )
+    except EOFError:
+        print(  # noqa: T201
+            "OAuth Client Secret could not be read.",
+            file=sys.stderr,
+        )
+        return 1
+
+    client = YTMusic(
+        user_credentials,
+        oauth_credentials=OAuthCredentials(
+            args.oauth_client_id,
+            oauth_client_secret,
+        ),
+    )
 
     if args.command == "download-library":
         download_library(client)
@@ -182,6 +206,4 @@ def main():
     elif args.command == "sync-playlist":
         sync_playlist(client, args.playlist_id)
 
-
-if __name__ == "__main__":
-    main()
+    return 0

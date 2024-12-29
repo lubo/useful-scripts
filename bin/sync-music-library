@@ -7,8 +7,18 @@
 
 set -eo pipefail
 
+__ytm_with_user_credentials() {
+	ytm "${YTM_OAUTH_CLIENT_ID}" <(pass "${YTM_CREDENTIALS_PASS_PATH}") "$@"
+}
+
 __ytm() {
-	ytm <(pass "${YTM_CREDENTIALS_PASS_PATH}") "$@"
+	if [ -z "${YTM_OAUTH_CLIENT_SECRET_PASS_PATH}" ]; then
+		__ytm_with_user_credentials "$@"
+		return
+	fi
+
+	pass "${YTM_OAUTH_CLIENT_SECRET_PASS_PATH}" |
+		__ytm_with_user_credentials "$@"
 }
 
 commit_changes() {
@@ -28,6 +38,16 @@ commit_changes() {
 main() {
 	if [ -z "${YTM_CREDENTIALS_PASS_PATH}" ]; then
 		echo "\$YTM_CREDENTIALS_PASS_PATH: Variable unset" >&2
+		exit 1
+	fi
+
+	if [ -z "${YTM_OAUTH_CLIENT_ID}" ]; then
+		echo "\$YTM_OAUTH_CLIENT_ID: Variable unset" >&2
+		exit 1
+	fi
+
+	if [ -z "${YTM_OAUTH_CLIENT_SECRET_PASS_PATH}" ]; then
+		echo "\$YTM_OAUTH_CLIENT_SECRET_PASS_PATH: Variable unset" >&2
 		exit 1
 	fi
 
