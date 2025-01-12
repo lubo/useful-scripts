@@ -29,7 +29,7 @@ UNDEFINED_SYMBOLS = [
 ffibuilder = FFI()
 ffibuilder.cdef(
     re.sub(
-        rf'^.+? ({"|".join(UNDEFINED_SYMBOLS)})\([\S\s]+?\);$',
+        rf"^.+? ({'|'.join(UNDEFINED_SYMBOLS)})\([\S\s]+?\);$",
         "",
         subprocess.run(  # noqa: S603
             [

@@ -31,7 +31,7 @@ def format_song_entry(song_entry):
         " -- ".join(
             operator.itemgetter("title", "artist", "album")(song_entry),
         )
-        + f' ({song_entry["id"]})'
+        + f" ({song_entry['id']})"
     )
 
 
