@@ -1,3 +1,5 @@
+# ruff: noqa: A005
+
 from collections import UserDict
 from collections.abc import Mapping
 from typing import Any, cast, Generic, TypeVar

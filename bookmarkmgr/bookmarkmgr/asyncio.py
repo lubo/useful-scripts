@@ -1,3 +1,5 @@
+# ruff: noqa: A005
+
 import asyncio
 from asyncio import Semaphore, Task, TaskGroup
 import time
