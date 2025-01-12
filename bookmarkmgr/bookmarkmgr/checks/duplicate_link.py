@@ -1,5 +1,6 @@
 from asyncio import Event
 from datetime import datetime
+from ipaddress import ip_address
 from urllib.parse import parse_qsl, urlencode, urlparse
 
 from bookmarkmgr import scraper
@@ -15,6 +16,15 @@ class _Link:
         return self.created < other.created or (
             self.created == other.created and self.id < other.id
         )
+
+
+def _is_ip_address(string: str) -> bool:
+    try:
+        ip_address(string)
+    except ValueError:
+        return False
+
+    return True
 
 
 def _remove_query_from_url(url: str) -> str:
@@ -116,6 +126,7 @@ def get_canonical_url(page: scraper.Page, url: str) -> str | None:
             or parsed_canonical_url.hostname.endswith(
                 f".{parsed_url.hostname}",
             )
+            or _is_ip_address(parsed_canonical_url.hostname)
             else parsed_canonical_url.netloc
         ),
         query=urlencode(
