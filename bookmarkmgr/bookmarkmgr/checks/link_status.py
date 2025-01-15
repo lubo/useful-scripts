@@ -1,9 +1,13 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable
 from enum import IntEnum, unique
+from functools import partial
 from http import HTTPStatus
 import itertools
 import re
+from typing import Any, Protocol
 from urllib.parse import ParseResult, quote, urlparse
+
+from tld import get_fld
 
 from bookmarkmgr.cronet import RequestError, Response
 from bookmarkmgr.scraper import Page
@@ -19,6 +23,12 @@ NOT_FOUND_STATUS_CODES = {
     HTTPStatus.NOT_FOUND.value,
     HTTPStatus.GONE.value,
 }
+
+_get_fld_lax = partial(
+    get_fld,
+    fail_silently=True,
+    fix_protocol=True,
+)
 
 
 @unique
@@ -78,11 +88,34 @@ async def check_link_status(
     return link_status, error
 
 
-def _fix_url_quoting(url: ParseResult) -> ParseResult:
+def _fix_url_quoting(
+    url: ParseResult,
+    **_: Any,
+) -> ParseResult:
     return url._replace(path=quote(url.path))
 
 
-def _fix_url_trailing_slash(url: ParseResult) -> ParseResult:
+def _fix_url_subdomain(
+    url: ParseResult,
+    redirect_url: ParseResult,
+) -> ParseResult:
+    if (
+        url.hostname is None
+        or redirect_url.hostname is None
+        or url.hostname == redirect_url.hostname
+    ):
+        return url
+
+    if _get_fld_lax(url.hostname) == _get_fld_lax(redirect_url.hostname):
+        return url._replace(netloc=redirect_url.netloc)
+
+    return url
+
+
+def _fix_url_trailing_slash(
+    url: ParseResult,
+    **_: Any,
+) -> ParseResult:
     return url._replace(
         path=(
             url.path.rstrip("/") if url.path.endswith("/") else f"{url.path}/"
@@ -90,9 +123,19 @@ def _fix_url_trailing_slash(url: ParseResult) -> ParseResult:
     )
 
 
-_URL_FIXERS: list[Callable[[ParseResult], ParseResult]] = [
+class _FixerCallable(Protocol):
+    def __call__(
+        self,
+        url: ParseResult,
+        *,
+        redirect_url: ParseResult,
+    ) -> ParseResult: ...
+
+
+_URL_FIXERS: list[_FixerCallable] = [
     _fix_url_quoting,
     _fix_url_trailing_slash,
+    _fix_url_subdomain,
 ]
 
 
@@ -113,6 +156,7 @@ def get_fixed_url(response: Response, url: str) -> None | str:
             for fixer in fixer_combination:
                 fixed_parsed_url = fixer(
                     fixed_parsed_url,
+                    redirect_url=parsed_redirect_url,
                 )
 
             if fixed_parsed_url == parsed_redirect_url:
