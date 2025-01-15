@@ -1,6 +1,7 @@
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from enum import IntEnum, unique
 from http import HTTPStatus
+import itertools
 import re
 from urllib.parse import ParseResult, quote, urlparse
 
@@ -77,59 +78,44 @@ async def check_link_status(
     return link_status, error
 
 
-def _get_quoted_url_matching_redirect(
-    response: Response,
-    parsed_url: ParseResult,
-) -> str | None:
-    if response.status_code not in REDIRECT_STATUS_CODES:
-        return None
-
-    quoted_url = parsed_url._replace(path=quote(parsed_url.path)).geturl()
-
-    if response.redirect_url == quoted_url:
-        return quoted_url
-
-    return None
+def _fix_url_quoting(url: ParseResult) -> ParseResult:
+    return url._replace(path=quote(url.path))
 
 
-def get_fixed_url(response: Response, url: str) -> None | str:
-    if (
-        response.status_code
-        not in REDIRECT_STATUS_CODES | NOT_FOUND_STATUS_CODES
-    ):
-        return None
-
-    parsed_url = urlparse(url)
-
-    if (
-        quoted_url := _get_quoted_url_matching_redirect(response, parsed_url)
-    ) is not None:
-        return quoted_url
-
-    # Raindrop breaks some links during import by removing trailing slash and
-    # by adding trailing slash during new link addition.
-    potentially_fixed_parsed_url = parsed_url._replace(
+def _fix_url_trailing_slash(url: ParseResult) -> ParseResult:
+    return url._replace(
         path=(
-            parsed_url.path.rstrip("/")
-            if parsed_url.path.endswith("/")
-            else f"{parsed_url.path}/"
+            url.path.rstrip("/") if url.path.endswith("/") else f"{url.path}/"
         ),
     )
 
-    if (
-        quoted_url := _get_quoted_url_matching_redirect(
-            response,
-            potentially_fixed_parsed_url,
-        )
-    ) is not None:
-        return quoted_url
 
-    potentially_fixed_url = potentially_fixed_parsed_url.geturl()
+_URL_FIXERS: list[Callable[[ParseResult], ParseResult]] = [
+    _fix_url_quoting,
+    _fix_url_trailing_slash,
+]
 
-    if (
-        response.status_code in REDIRECT_STATUS_CODES
-        and response.redirect_url != potentially_fixed_url
-    ):
+
+def get_fixed_url(response: Response, url: str) -> None | str:
+    if response.status_code in NOT_FOUND_STATUS_CODES:
+        return _fix_url_trailing_slash(urlparse(url)).geturl()
+
+    if response.status_code not in REDIRECT_STATUS_CODES:
         return None
 
-    return potentially_fixed_url
+    parsed_url = urlparse(url)
+    parsed_redirect_url = urlparse(response.redirect_url)
+
+    for length in range(1, len(_URL_FIXERS) + 1):
+        for fixer_combination in itertools.combinations(_URL_FIXERS, length):
+            fixed_parsed_url = parsed_url
+
+            for fixer in fixer_combination:
+                fixed_parsed_url = fixer(
+                    fixed_parsed_url,
+                )
+
+            if fixed_parsed_url == parsed_redirect_url:
+                return fixed_parsed_url.geturl()
+
+    return None
