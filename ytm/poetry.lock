@@ -187,13 +187,13 @@ test = ["pytest (>=8.1,<9.0)", "pytest-rerunfailures (>=14.0,<15.0)"]
 
 [[package]]
 name = "ytmusicapi"
-version = "1.9.1"
+version = "1.10.0"
 description = "Unofficial API for YouTube Music"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "ytmusicapi-1.9.1-py3-none-any.whl", hash = "sha256:2790fe0173f0a3559c87e9626ba2521956d7920e731b340ce70d63b93deadf9b"},
-    {file = "ytmusicapi-1.9.1.tar.gz", hash = "sha256:aade7da48e3d789f01947e4a701c3c29ccebfbf7b2b7a802b7ae9a8706c6bb54"},
+    {file = "ytmusicapi-1.10.0-py3-none-any.whl", hash = "sha256:2f5f0f5079769bfd08e19c464e074e62dd6d1551a93ca6dfe7996d24d754dc8a"},
+    {file = "ytmusicapi-1.10.0.tar.gz", hash = "sha256:7a5492b0b9b053f04e93e79fe0afaee46c2d47d9449450cbde4a5b079c7f5edf"},
 ]
 
 [package.dependencies]
@@ -202,4 +202,4 @@ requests = ">=2.22"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "d7cafcfacd8f43a69e22a19378b512c2f17ade1d40c3e02a0330a09ce6a150f8"
+content-hash = "88acf89620a12a44bfb648ceb68cc02164fa70c5fbb67f75010ea7c5e82bf34a"
