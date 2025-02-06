@@ -3,7 +3,7 @@
 DEFAULT_HEADERS = (
     (
         "sec-ch-ua",
-        '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
+        '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
     ),
     ("sec-ch-ua-mobile", "?0"),
     ("sec-ch-ua-platform", '"Linux"'),
@@ -11,7 +11,7 @@ DEFAULT_HEADERS = (
     ("Upgrade-Insecure-Requests", "1"),
     (
         "User-Agent",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
     ),
     (
         "Accept",
