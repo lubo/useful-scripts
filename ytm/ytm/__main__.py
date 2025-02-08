@@ -56,6 +56,7 @@ def download_library(client):
         {
             "extractor_args": {
                 "youtube": {
+                    "formats": ["missing_pot"],
                     "player_client": ["web_music"],
                 },
             },
