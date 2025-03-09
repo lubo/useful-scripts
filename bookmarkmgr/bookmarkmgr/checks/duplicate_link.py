@@ -1,6 +1,7 @@
 from asyncio import Event
 from datetime import datetime
 from ipaddress import ip_address
+import re
 from urllib.parse import parse_qsl, urlencode, urlparse
 
 from bookmarkmgr import scraper
@@ -129,6 +130,8 @@ def get_canonical_url(page: scraper.Page, url: str) -> str | None:
             or _is_ip_address(parsed_canonical_url.hostname)
             else parsed_canonical_url.netloc
         ),
+        # pathlib nor os.path help with the leading double slash.
+        path=re.sub(r"^//", "/", parsed_canonical_url.path),
         query=urlencode(
             [param for param in canonical_url_qp if param in common_qp],
         ),
