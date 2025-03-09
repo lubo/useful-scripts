@@ -2,33 +2,81 @@ name: CI
 on: push
 permissions: {}
 jobs:
-  lint-all:
-    name: Lint - All
+  # Setting PYTHON_RUFF_CONFIG_FILE to an empty string makes Super-Linter run
+  # Ruff with the default .ruff.toml instead of passing empty string into Ruff
+  # --config option. This changes Ruff behavior, which makes it ignore
+  # configuration in project subdirectories. Making /.github/linters/.ruff.toml
+  # empty doesn't change the Ruff behavior.
+  # Hence, a separate job needs to be run for each component. See:
+  # https://github.com/super-linter/super-linter/issues/7544
+  super-linter:
+    name: Super-Linter
     runs-on: ubuntu-latest
     permissions:
       contents: read
       statuses: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - all
+          - bookmarkmgr
+          - bookmarks4diff
+          - ytm
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: super-linter/super-linter/slim@v7.1.0
+      - name: Register variables
+        id: vars
+        run: >-
+          {
+            echo "pyproject-toml-path=${{
+              matrix.component != 'all'
+              && format(
+                '../../../github/workspace/{0}/pyproject.toml',
+                matrix.component
+              )
+              || ''
+            }}"
+          } >> "${GITHUB_OUTPUT}"
+      - uses: super-linter/super-linter/slim@v8.5.0
         env:
+          FILTER_REGEX_EXCLUDE: >-
+            ^${{
+              matrix.component == 'all'
+              && '/github/workspace/(bookmarkmgr|bookmarks4diff|ytm)/'
+              || '$'
+            }}
+          FILTER_REGEX_INCLUDE: >-
+            ${{
+              matrix.component != 'all'
+              && format('^/github/workspace/{0}/', matrix.component)
+              || ''
+            }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHON_MYPY_CONFIG_FILE: ${{ steps.vars.outputs.pyproject-toml-path }}
+          PYTHON_RUFF_CONFIG_FILE: ${{ steps.vars.outputs.pyproject-toml-path }}
+          PYTHON_RUFF_FORMAT_CONFIG_FILE: >-
+            ${{ steps.vars.outputs.pyproject-toml-path }}
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_PYTHON_ISORT: false
-          VALIDATE_PYTHON_MYPY: false
+          VALIDATE_PYTHON_MYPY: ${{ matrix.component != 'bookmarkmgr' && '' }}
           VALIDATE_PYTHON_PYINK: false
           VALIDATE_PYTHON_PYLINT: false
-  lint-bookmarkmgr:
-    name: Lint - bookmarkmgr
-    # ubuntu-latest is still Ubuntu 22.04, which uses ancient Poetry version.
+  mypy:
+    name: Mypy
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - bookmarkmgr
     defaults:
       run:
-        working-directory: bookmarkmgr
+        working-directory: ${{ matrix.component }}
     steps:
       - uses: actions/checkout@v6
         with:
