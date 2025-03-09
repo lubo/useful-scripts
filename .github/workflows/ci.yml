@@ -3,7 +3,7 @@ on: push
 permissions: {}
 jobs:
   lint-all:
-    name: Lint - All
+    name: Lint (all)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -14,6 +14,7 @@ jobs:
           fetch-depth: 0
       - uses: super-linter/super-linter/slim@v7.3.0
         env:
+          FILTER_REGEX_EXCLUDE: ^(bookmarkmgr|bookmarks4diff|ytm)/
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_PYTHON_FLAKE8: false
@@ -21,18 +22,34 @@ jobs:
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYINK: false
           VALIDATE_PYTHON_PYLINT: false
-  lint-bookmarkmgr:
-    name: Lint - bookmarkmgr
-    # ubuntu-latest is still Ubuntu 22.04, which uses ancient Poetry version.
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: bookmarkmgr
+  lint-subproject:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    strategy:
+      matrix:
+        subproject:
+          - bookmarkmgr
+          - bookmarks4diff
+          - ytm
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y --no-install-recommends python3-poetry
+        with:
+          fetch-depth: 0
       - name: Don't build native modules
+        if: matrix.subproject == 'bookmarkmgr'
         run: echo > build.py
-      - run: poetry install
-      - run: poetry run mypy .
+      - uses: super-linter/super-linter/slim@v7.3.0
+        env:
+          DEFAULT_WORKSPACE: /github/workspace/${{ matrix.subproject }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINTER_RULES_PATH: .
+          PYTHON_MYPY_CONFIG_FILE: pyproject.toml
+          PYTHON_RUFF_CONFIG_FILE: pyproject.toml
+          VALIDATE_PYTHON_BLACK: false
+          VALIDATE_PYTHON_FLAKE8: false
+          VALIDATE_PYTHON_ISORT: false
+          VALIDATE_PYTHON_PYINK: false
+          VALIDATE_PYTHON_PYLINT: false
