@@ -31,7 +31,7 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
-aiohttp = "^3.11.11"
+aiohttp = "^3.11.13"
 aiohttp-retry = "^2.9.1"
 cffi = "^1.17.1"
 enlighten = "^1.13.0"
@@ -41,7 +41,7 @@ tld = "^0.13"
 yarl = "^1.18.3"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.14.1"
+mypy = "^1.15.0"
 
 # https://github.com/python-poetry/poetry/issues/2740
 [tool.poetry.build]
