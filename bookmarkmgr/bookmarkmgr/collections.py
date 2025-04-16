@@ -53,4 +53,4 @@ class TypedDefaultsDict(
         super().__init__(*args, defaults=defaults, **kwargs)
 
     def to_typeddict(self) -> _TypedDefaultsDict_Data_T:
-        return cast(_TypedDefaultsDict_Data_T, self)
+        return cast("_TypedDefaultsDict_Data_T", self)

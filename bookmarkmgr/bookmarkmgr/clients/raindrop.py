@@ -135,7 +135,7 @@ class RaindropClient(ClientSessionContextManagerMixin):
                 f"&perpage={RAINDROPS_PER_PAGE}"
             ),
         ) as response:
-            return cast(CollectionPage, await response.json())
+            return cast("CollectionPage", await response.json())
 
     async def update_raindrop(
         self,
