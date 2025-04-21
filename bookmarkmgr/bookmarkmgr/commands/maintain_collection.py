@@ -379,7 +379,10 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
 
     if (
         not user_options.no_checks
-        and "broken" not in raindrop["tags"]
+        and (
+            "broken" not in raindrop["tags"]
+            or datetime.now(tz=UTC) > last_check + timedelta(weeks=1)
+        )
         and (
             "possibly-broken" in raindrop["tags"]
             or datetime.now(tz=UTC) > last_check + timedelta(days=1)
