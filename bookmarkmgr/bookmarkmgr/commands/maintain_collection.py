@@ -377,12 +377,12 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
 
     archival_tasks = create_archival_tasks_partial(task_group)
 
-    if not (
-        user_options.no_checks
-        or "broken" in raindrop["tags"]
-        or (
-            "possibly-broken" not in raindrop["tags"]
-            and datetime.now(tz=UTC) < last_check + timedelta(days=1)
+    if (
+        not user_options.no_checks
+        and "broken" not in raindrop["tags"]
+        and (
+            "possibly-broken" in raindrop["tags"]
+            or datetime.now(tz=UTC) > last_check + timedelta(days=1)
         )
     ):
         task_group.create_task(
