@@ -58,7 +58,7 @@ LINK_STATUS_TAGS = {
 
 @dataclass(frozen=True)
 class MaintainCollectionOptions:
-    host_rate_limits: list[tuple[str, int, float]]
+    host_rate_limits: list[tuple[str, int, float, float]]
     no_archive: bool
     no_archive_broken: bool
     no_checks: bool

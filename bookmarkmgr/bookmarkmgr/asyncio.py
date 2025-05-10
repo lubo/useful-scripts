@@ -2,6 +2,7 @@
 
 import asyncio
 from asyncio import Semaphore, Task, TaskGroup
+import random
 import time
 from typing import Any
 
@@ -39,7 +40,8 @@ class ForgivingTaskGroup(TaskGroup):
 # https://github.com/ArtyomKozyrev8/BucketRateLimiter provide inadequate
 # performance. See https://github.com/mjpieters/aiolimiter/issues/73.
 class RateLimiter:
-    def __init__(self, limit: int, period: float = 60):
+    def __init__(self, limit: int, period: float = 60, jitter: float = 0):
+        self.jitter = jitter
         self.period = period
 
         self._semaphore = Semaphore(limit)
@@ -49,7 +51,10 @@ class RateLimiter:
         await self._semaphore.acquire()
 
     async def __aexit__(self, *args: object, **kwargs: Any) -> None:
-        task = asyncio.create_task(self._release(self.period + time.time()))
+        jitter = random.uniform(0, self.jitter)  # noqa: S311
+        task = asyncio.create_task(
+            self._release(time.time() + self.period + jitter),
+        )
         self._release_tasks.add(task)
         task.add_done_callback(self._release_task_done)
 

@@ -335,15 +335,15 @@ class PerHostnameRateLimitedSession(RetrySession):
     def __init__(
         self,
         *args: Any,
-        host_rate_limits: Iterable[tuple[str, int, float]],
+        host_rate_limits: Iterable[tuple[str, int, float, float]],
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self.__null_context = nullcontext()
         self.__rate_limiters = {
-            hostname.lower(): RateLimiter(limit, period)
-            for hostname, limit, period in host_rate_limits
+            hostname.lower(): RateLimiter(limit, period, jitter)
+            for hostname, limit, period, jitter in host_rate_limits
         }
 
     async def _request(

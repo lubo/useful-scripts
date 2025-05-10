@@ -17,7 +17,8 @@ from .commands.maintain_collection import (
     MaintainCollectionOptions,
 )
 
-_HOST_RATE_LIMIT_NARGS = 3
+_HOST_RATE_LIMIT_METAVAR = ("hostname", "limit", "period", "jitter")
+_HOST_RATE_LIMIT_NARGS = len(_HOST_RATE_LIMIT_METAVAR)
 
 
 def _sigint_handler(
@@ -38,7 +39,7 @@ def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
         match index:
             case 1:
                 return int(value)
-            case 2:
+            case 2 | 3:
                 return float(value)
 
         return value
@@ -100,7 +101,7 @@ def main() -> None:
         default=[],
         dest="host_rate_limits",
         help="Sets rate limit for a hostname during link checks",
-        metavar=("hostname", "limit", "period"),
+        metavar=_HOST_RATE_LIMIT_METAVAR,
         nargs=_HOST_RATE_LIMIT_NARGS,
         type=_host_rate_limits_parser(),
     )
