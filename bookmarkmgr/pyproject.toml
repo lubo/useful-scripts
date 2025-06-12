@@ -31,18 +31,18 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
-aiohttp = "^3.11.18"
+aiohttp = "^3.12.6"
 aiohttp-retry = "^2.9.1"
 cffi = "^1.17.1"
 # >1.13.0 adds garbage characters.
-enlighten = "1.13.0"
+enlighten = "1.14.1"
 overrides = "^7.7.0"
 python = "^3.12"
 tld = "^0.13"
 yarl = "^1.20.0"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.15.0"
+mypy = "^1.16.0"
 
 # https://github.com/python-poetry/poetry/issues/2740
 [tool.poetry.build]
