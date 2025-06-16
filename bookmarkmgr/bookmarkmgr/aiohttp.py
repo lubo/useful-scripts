@@ -24,6 +24,7 @@ logger = get_logger()
 RATE_LIMIT_STATUS_CODES = {
     HTTPStatus.REQUEST_TIMEOUT.value,
     HTTPStatus.TOO_MANY_REQUESTS.value,
+    520,  # Web server returns an unknown error (Cloudflare)
 }
 
 
