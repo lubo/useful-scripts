@@ -1,8 +1,6 @@
-# ruff: noqa: A005
-
 from collections import UserDict
 from collections.abc import Mapping
-from typing import Any, cast, Generic, TypeVar
+from typing import Any, cast, TypeVar
 
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
@@ -27,30 +25,23 @@ _TypedDict_KT = str
 _TypedDict_VT = object
 _TypedDict_T = Mapping[_TypedDict_KT, _TypedDict_VT]
 
-_TypedDefaultsDict_Data_T = TypeVar(
-    "_TypedDefaultsDict_Data_T",
-    bound=_TypedDict_T,
-)
-_TypedDefaultsDict_Defaults_T = TypeVar(
-    "_TypedDefaultsDict_Defaults_T",
-    bound=_TypedDict_T,
-)
 
-
-class TypedDefaultsDict(
+class TypedDefaultsDict[
+    TypedDefaultsDict_Data_T: _TypedDict_T,
+    TypedDefaultsDict_Defaults_T: _TypedDict_T,
+](
     DefaultsDict[_TypedDict_KT, _TypedDict_VT],
-    Generic[_TypedDefaultsDict_Data_T, _TypedDefaultsDict_Defaults_T],
 ):
-    data: _TypedDefaultsDict_Data_T  # type: ignore[assignment]
-    defaults: _TypedDefaultsDict_Defaults_T
+    data: TypedDefaultsDict_Data_T  # type: ignore[assignment]
+    defaults: TypedDefaultsDict_Defaults_T
 
     def __init__(
         self,
         *args: Any,
-        defaults: _TypedDefaultsDict_Defaults_T,
+        defaults: TypedDefaultsDict_Defaults_T,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, defaults=defaults, **kwargs)
 
-    def to_typeddict(self) -> _TypedDefaultsDict_Data_T:
-        return cast("_TypedDefaultsDict_Data_T", self)
+    def to_typeddict(self) -> TypedDefaultsDict_Data_T:
+        return cast("TypedDefaultsDict_Data_T", self)

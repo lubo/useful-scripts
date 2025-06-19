@@ -1,5 +1,3 @@
-# ruff: noqa: A005
-
 from typing import NewType
 
 Buffer = NewType("Buffer", object)

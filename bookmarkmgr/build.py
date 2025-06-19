@@ -31,7 +31,7 @@ ffibuilder.cdef(
     re.sub(
         rf"^.+? ({'|'.join(UNDEFINED_SYMBOLS)})\([\S\s]+?\);$",
         "",
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             [
                 "cpp",
                 "-DCOMPONENTS_CRONET_NATIVE_INCLUDE_CRONET_EXPORT_H_",

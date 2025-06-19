@@ -50,7 +50,7 @@ type _UrlRequestCallback_OnSucceededFunc = Callable[
 
 _Handle = NewType("_Handle", object)
 
-# ruff: noqa: N802, PLR0913
+# ruff: noqa: N802
 
 class _FFI:
     def cast(self, c_type: Literal["char*"], value: Any) -> String: ...
