@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from asyncio import Event
 import contextlib
 from http import HTTPStatus
 from typing import Any, cast, Self
@@ -153,7 +153,7 @@ def _on_request_succeeded(
     response_info: UrlResponseInfo,  # noqa: ARG001
 ) -> None:
     manager = _get_manager(callback)
-    manager.on_request_finished()
+    manager._is_done.set()  # noqa: SLF001
 
 
 @ffi.def_extern()
@@ -174,7 +174,7 @@ def _on_request_failed(
         ),
         code=lib.Cronet_Error_error_code_get(error),
     )
-    manager.on_request_finished()
+    manager._is_done.set()  # noqa: SLF001
 
 
 @ffi.def_extern()
@@ -184,18 +184,17 @@ def _on_request_canceled(
     response_info: UrlResponseInfo,  # noqa: ARG001
 ) -> None:
     manager = _get_manager(callback)
-    manager.on_request_finished()
+    manager._is_done.set()  # noqa: SLF001
 
 
 class RequestCallbackManager:
     def __init__(
         self,
         request_parameters: RequestParameters,
-        on_request_finished: Callable[[], None],
     ) -> None:
         self._handle = ffi.new_handle(self)
         self._callback: UrlRequestCallback | None = None
-        self.on_request_finished = on_request_finished
+        self._is_done = Event()
         self.request_parameters = request_parameters
 
     async def __aenter__(self) -> Self:
@@ -212,6 +211,8 @@ class RequestCallbackManager:
                 self._callback,
                 self._handle,
             )
+
+        self._is_done.clear()
 
         self.request_error: RequestError | None = None
         self.response = Response(url=self.request_parameters.url)
@@ -236,3 +237,6 @@ class RequestCallbackManager:
             raise NotContextManagerError
 
         return self._callback
+
+    async def wait_for_done(self) -> None:
+        await self._is_done.wait()

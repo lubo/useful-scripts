@@ -49,6 +49,7 @@ RETRYABLE_STATUS_CODES = {
 class Session:
     def __init__(self) -> None:
         self._engine: Engine | None = None
+        self._executor_manager: ExecutorManager | None = None
 
     async def __aenter__(self) -> Self:
         self._open()
@@ -70,29 +71,35 @@ class Session:
         self._engine = None
 
     def _open(self) -> None:
-        if self._engine is not None:
-            return
+        if self._engine is None:
+            self._engine = lib.Cronet_Engine_Create()
 
-        self._engine = lib.Cronet_Engine_Create()
+            try:
+                with destroying(
+                    lib.Cronet_EngineParams_Create(),
+                    lib.Cronet_EngineParams_Destroy,
+                ) as params:
+                    _raise_for_error_result(
+                        lib.Cronet_Engine_StartWithParams(
+                            self._engine,
+                            params,
+                        ),
+                    )
+            except Error:
+                self._dispose_engine()
+                raise
 
-        try:
-            with destroying(
-                lib.Cronet_EngineParams_Create(),
-                lib.Cronet_EngineParams_Destroy,
-            ) as params:
-                _raise_for_error_result(
-                    lib.Cronet_Engine_StartWithParams(self._engine, params),
-                )
-        except Error:
-            self._dispose_engine()
-            raise
+        if self._executor_manager is None:
+            self._executor_manager = ExecutorManager()
 
     def close(self) -> None:
-        if self._engine is None:
-            return
+        if self._executor_manager is not None:
+            self._executor_manager.shutdown()
+            self._executor_manager = None
 
-        _raise_for_error_result(lib.Cronet_Engine_Shutdown(self._engine))
-        self._dispose_engine()
+        if self._engine is not None:
+            _raise_for_error_result(lib.Cronet_Engine_Shutdown(self._engine))
+            self._dispose_engine()
 
     async def delete(self, *args: Any, **kwargs: Any) -> Response:
         return await self.request("DELETE", *args, **kwargs)
@@ -122,16 +129,11 @@ class Session:
         params: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> Response:
-        if self._engine is None:
+        if self._engine is None or self._executor_manager is None:
             raise NotContextManagerError
 
         if params is not None:
             url = str(URL(url).update_query(params))
-
-        executor_manager = ExecutorManager()
-
-        def on_request_finished() -> None:
-            executor_manager.shutdown()
 
         async with (
             adestroying(
@@ -148,9 +150,7 @@ class Session:
                     url=url,
                     **kwargs,
                 ),
-                on_request_finished,
             ) as callback_manager,
-            executor_manager,
         ):
             lib.Cronet_UrlRequestParams_http_method_set(
                 parameters,
@@ -176,11 +176,13 @@ class Session:
                     url.encode(),
                     parameters,
                     callback_manager.callback,
-                    executor_manager.executor,
+                    self._executor_manager.executor,
                 ),
             )
 
             _raise_for_error_result(lib.Cronet_UrlRequest_Start(request))
+
+            await callback_manager.wait_for_done()
 
         if callback_manager.result_error is not None:
             raise callback_manager.result_error
