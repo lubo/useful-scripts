@@ -226,29 +226,25 @@ async def scrape_and_check(
     session: cronet.Session,
     url: str,
 ) -> tuple[scraper.Page | None, LinkStatus, str | None, str | None]:
-    page = None
-    response = None
+    scraper_result = await scraper.scrape_page(session, url)
+    link_status, error = check_link_status(scraper_result)
 
-    async def scrape(url: str) -> tuple[scraper.Page | None, cronet.Response]:
-        nonlocal page, response
+    if isinstance(scraper_result, cronet.RequestError):
+        return None, link_status, error, None
 
-        page, response = await scraper.get_page(session, url)
+    if (fixed_url := get_fixed_url(scraper_result.response, url)) is None:
+        return scraper_result.page, link_status, error, None
 
-        return page, response
+    old_page = scraper_result.page
 
-    link_status, error = await check_link_status(scrape(url))
+    scraper_result = await scraper.scrape_page(session, fixed_url)
+    fixed_link_status, fixed_error = check_link_status(scraper_result)
 
-    if response is None or (fixed_url := get_fixed_url(response, url)) is None:
-        return page, link_status, error, None
-
-    old_page = page
-
-    fixed_link_status, fixed_error = await check_link_status(
-        scrape(fixed_url),
-    )
-
-    if fixed_link_status == LinkStatus.OK:
-        return page, fixed_link_status, fixed_error, fixed_url
+    if (
+        isinstance(scraper_result, scraper.ScrapedData)
+        and fixed_link_status == LinkStatus.OK
+    ):
+        return scraper_result.page, fixed_link_status, fixed_error, fixed_url
 
     return old_page, link_status, error, None
 

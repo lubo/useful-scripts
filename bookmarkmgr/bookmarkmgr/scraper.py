@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from http import HTTPStatus
 
-from bookmarkmgr.cronet import Response, Session
+from bookmarkmgr.cronet import RequestError, Response, Session
 
 INVALID_HTML_PARENTS = {
     "base",
@@ -19,6 +19,15 @@ class Page:
     default_lang_url: str | None = None
     og_url: str | None = None
     title: str = ""
+
+
+@dataclass(slots=True)
+class ScrapedData:
+    response: Response
+    page: Page | None = None
+
+
+type Result = RequestError | ScrapedData
 
 
 def _scrape_html(html: str) -> Page:  # noqa: C901
@@ -89,10 +98,10 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
     return page
 
 
-async def get_page(
+async def scrape_page(
     session: Session,
     url: str,
-) -> tuple[Page | None, Response]:
+) -> Result:
     page = None
 
     async def retry_predicate(response: Response) -> bool:
@@ -105,10 +114,16 @@ async def get_page(
 
         return page.body_text == "Loading..."  # Rate limit hit
 
-    response = await session.get(
-        url,
-        allow_redirects=False,
-        retry_predicate=retry_predicate,
-    )
+    try:
+        response = await session.get(
+            url,
+            allow_redirects=False,
+            retry_predicate=retry_predicate,
+        )
+    except RequestError as error:
+        return error
 
-    return page, response
+    return ScrapedData(
+        page=page,
+        response=response,
+    )

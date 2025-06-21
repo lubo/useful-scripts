@@ -1,4 +1,3 @@
-from collections.abc import Awaitable
 from enum import IntEnum, unique
 from functools import partial
 from http import HTTPStatus
@@ -9,8 +8,8 @@ from urllib.parse import ParseResult, quote, urlparse
 
 from tld import get_fld
 
+from bookmarkmgr import scraper
 from bookmarkmgr.cronet import RequestError, Response
-from bookmarkmgr.scraper import Page
 
 REDIRECT_STATUS_CODES = {
     HTTPStatus.MOVED_PERMANENTLY.value,
@@ -39,33 +38,31 @@ class LinkStatus(IntEnum):
     BLOCKED = 4
 
 
-async def check_link_status(
-    get_page_awaitable: Awaitable[tuple[Page | None, Response]],
+def check_link_status(
+    scraper_result: scraper.Result,
 ) -> tuple[LinkStatus, None | str]:
     link_status = LinkStatus.OK
     error = None
 
-    try:
-        page, response = await get_page_awaitable
-    except RequestError as e:
+    if isinstance(scraper_result, RequestError):
         link_status = LinkStatus.POSSIBLY_BROKEN
-        error = str(e)
+        error = str(scraper_result)
 
         return link_status, error
 
-    match response.status_code:
+    match scraper_result.response.status_code:
         case HTTPStatus.OK.value:
-            if page is None:
+            if scraper_result.page is None:
                 message = "Page is None"
                 raise ValueError(message)
 
-            if page.title == "Video deleted":
+            if scraper_result.page.title == "Video deleted":
                 link_status = LinkStatus.BROKEN
-                error = page.title
+                error = scraper_result.page.title
             elif (
                 match := re.fullmatch(
                     r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
-                    page.title,
+                    scraper_result.page.title,
                 )
             ) is not None:
                 link_status = LinkStatus.BROKEN
@@ -74,11 +71,15 @@ async def check_link_status(
             link_status = LinkStatus.BLOCKED
 
     if error is not None or (
-        response.ok and response.status_code not in REDIRECT_STATUS_CODES
+        scraper_result.response.ok
+        and scraper_result.response.status_code not in REDIRECT_STATUS_CODES
     ):
         return link_status, error
 
-    error = f"{response.status_code} {response.reason}"
+    error = "{} {}".format(  # noqa: UP032
+        scraper_result.response.status_code,
+        scraper_result.response.reason,
+    )
 
     if link_status != LinkStatus.OK:
         return link_status, error
