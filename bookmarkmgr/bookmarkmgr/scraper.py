@@ -1,9 +1,11 @@
 import asyncio
 from dataclasses import dataclass
+import gc
 from html.parser import HTMLParser
 from http import HTTPStatus
 
-from bookmarkmgr.cronet import RequestError, Response, Session
+from bookmarkmgr import cronet
+from bookmarkmgr.cronet import RequestError, ResponseStatus, Session
 
 INVALID_HTML_PARENTS = {
     "base",
@@ -19,6 +21,12 @@ class Page:
     default_lang_url: str | None = None
     og_url: str | None = None
     title: str = ""
+
+
+@dataclass(slots=True)
+class Response(ResponseStatus):
+    reason: str
+    redirect_url: str | None = None
 
 
 @dataclass(slots=True)
@@ -104,7 +112,7 @@ async def scrape_page(
 ) -> Result:
     page = None
 
-    async def retry_predicate(response: Response) -> bool:
+    async def retry_predicate(response: cronet.Response) -> bool:
         if response.status_code != HTTPStatus.OK.value:
             return False
 
@@ -123,7 +131,18 @@ async def scrape_page(
     except RequestError as error:
         return error
 
-    return ScrapedData(
+    result = ScrapedData(
         page=page,
-        response=response,
+        response=Response(
+            reason=response.reason,
+            redirect_url=response.redirect_url,
+            status_code=response.status_code,
+        ),
     )
+
+    # Response.content is ~2.4 MiB on average, so a massive amount of memory
+    # may be used unless we free it ASAP.
+    del response
+    gc.collect()
+
+    return result

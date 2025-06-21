@@ -1,5 +1,5 @@
 from .errors import Error, RequestError
-from .models import Response
+from .models import Response, ResponseStatus
 from .session import (
     PerHostnameRateLimitedSession,
     RateLimitedSession,
@@ -13,6 +13,7 @@ __all__ = (
     "RateLimitedSession",
     "RequestError",
     "Response",
+    "ResponseStatus",
     "RetrySession",
     "Session",
 )

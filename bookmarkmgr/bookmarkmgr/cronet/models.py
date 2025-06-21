@@ -4,21 +4,8 @@ from http import HTTPStatus
 
 
 @dataclass(slots=True)
-class RequestParameters:
-    method: str
-    url: str
-    allow_redirects: bool = True
-
-
-@dataclass(slots=True)
-class Response:
-    url: str
+class ResponseStatus:
     status_code: int
-    reason: str
-    charset: str = "utf-8"
-    content: bytes = b""
-    headers: Message = field(default_factory=Message)
-    redirect_url: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -27,6 +14,23 @@ class Response:
             <= self.status_code
             < HTTPStatus.BAD_REQUEST.value
         )
+
+
+@dataclass(slots=True)
+class RequestParameters:
+    method: str
+    url: str
+    allow_redirects: bool = True
+
+
+@dataclass(slots=True)
+class Response(ResponseStatus):
+    url: str
+    reason: str
+    charset: str = "utf-8"
+    content: bytes = b""
+    headers: Message = field(default_factory=Message)
+    redirect_url: str | None = None
 
     @property
     def text(self) -> str:

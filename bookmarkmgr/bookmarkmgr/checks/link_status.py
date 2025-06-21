@@ -9,7 +9,7 @@ from urllib.parse import ParseResult, quote, urlparse
 from tld import get_fld
 
 from bookmarkmgr import scraper
-from bookmarkmgr.cronet import RequestError, Response
+from bookmarkmgr.cronet import RequestError
 
 REDIRECT_STATUS_CODES = {
     HTTPStatus.MOVED_PERMANENTLY.value,
@@ -140,7 +140,7 @@ _URL_FIXERS: list[_FixerCallable] = [
 ]
 
 
-def get_fixed_url(response: Response, url: str) -> None | str:
+def get_fixed_url(response: scraper.Response, url: str) -> None | str:
     if response.status_code in NOT_FOUND_STATUS_CODES:
         return _fix_url_trailing_slash(urlparse(url)).geturl()
 
