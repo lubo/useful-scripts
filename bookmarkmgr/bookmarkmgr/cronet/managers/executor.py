@@ -46,8 +46,7 @@ class ExecutorManager:
         *args: Any,  # noqa: PYI036
         **kwargs: Any,
     ) -> None:
-        if exc_type is not None:
-            self.shutdown()
+        self.shutdown(process_pending=exc_type is None)
 
         try:
             if self._worker is not None:
@@ -84,6 +83,6 @@ class ExecutorManager:
 
         return self._executor
 
-    def shutdown(self) -> None:
-        self._processing_allowed = False
+    def shutdown(self, *, process_pending: bool = True) -> None:
+        self._processing_allowed = process_pending
         self._queue.put_nowait(None)

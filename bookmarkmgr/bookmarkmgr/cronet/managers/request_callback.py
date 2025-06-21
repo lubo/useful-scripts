@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from asyncio import Event
 import contextlib
 from http import HTTPStatus
 from typing import Any, cast, Self
@@ -34,7 +34,7 @@ def _cancel_request_on_error(
     except Error as error:
         lib.Cronet_UrlRequest_Cancel(request)
 
-        manager.result_error = error
+        manager._error = error  # noqa: SLF001
 
         return True
 
@@ -53,20 +53,33 @@ def _get_manager(callback: UrlRequestCallback) -> "RequestCallbackManager":
 def _process_response(
     manager: "RequestCallbackManager",
     response_info: UrlResponseInfo,
-) -> None:
-    manager.response.reason = ffi.string(
+) -> Response:
+    previous_response = manager._response  # noqa: SLF001
+
+    url = (
+        manager.request_parameters.url
+        if previous_response is None or not previous_response.redirect_url
+        else previous_response.redirect_url
+    )
+
+    status_code = lib.Cronet_UrlResponseInfo_http_status_code_get(
+        response_info,
+    )
+
+    reason = ffi.string(
         lib.Cronet_UrlResponseInfo_http_status_text_get(
             response_info,
         ),
     ).decode()
-    manager.response.status_code = (
-        lib.Cronet_UrlResponseInfo_http_status_code_get(response_info)
-    )
-    if not manager.response.reason:
+    if not reason:
         with contextlib.suppress(ValueError):
-            manager.response.reason = HTTPStatus(
-                manager.response.status_code,
-            ).phrase
+            reason = HTTPStatus(status_code).phrase
+
+    response = Response(
+        url=url,
+        status_code=status_code,
+        reason=reason,
+    )
 
     for index in range(
         lib.Cronet_UrlResponseInfo_all_headers_list_size(response_info),
@@ -75,9 +88,13 @@ def _process_response(
             response_info,
             index,
         )
-        manager.response.headers[
+        response.headers[
             ffi.string(lib.Cronet_HttpHeader_name_get(header)).decode()
         ] = ffi.string(lib.Cronet_HttpHeader_value_get(header)).decode()
+
+    manager._response = response  # noqa: SLF001
+
+    return response
 
 
 @ffi.def_extern()
@@ -88,21 +105,19 @@ def _on_request_redirect_received(
     new_location_url: String,
 ) -> None:
     manager = _get_manager(callback)
-    manager.response.redirect_url = ffi.string(new_location_url).decode()
+
+    response = _process_response(manager, response_info)
+    response.redirect_url = ffi.string(new_location_url).decode()
 
     if not manager.request_parameters.allow_redirects:
-        _process_response(manager, response_info)
         lib.Cronet_UrlRequest_Cancel(request)
         return
 
-    if _cancel_request_on_error(
+    _cancel_request_on_error(
         lib.Cronet_UrlRequest_FollowRedirect(request),
         request,
         manager,
-    ):
-        return
-
-    manager.response.url = manager.response.redirect_url
+    )
 
 
 @ffi.def_extern()
@@ -134,7 +149,9 @@ def _on_request_read_completed(
     bytes_read: int,
 ) -> None:
     manager = _get_manager(callback)
-    manager.response.content += ffi.string(
+
+    response = cast("Response", manager._response)  # noqa: SLF001
+    response.content += ffi.string(
         ffi.cast("char*", lib.Cronet_Buffer_GetData(buffer)),
         bytes_read,
     )
@@ -153,7 +170,7 @@ def _on_request_succeeded(
     response_info: UrlResponseInfo,  # noqa: ARG001
 ) -> None:
     manager = _get_manager(callback)
-    manager.on_request_finished()
+    manager._is_done.set()  # noqa: SLF001
 
 
 @ffi.def_extern()
@@ -164,7 +181,7 @@ def _on_request_failed(
     error: Error_,
 ) -> None:
     manager = _get_manager(callback)
-    manager.request_error = RequestError(
+    manager._error = RequestError(  # noqa: SLF001
         "{}: {} {}".format(
             ffi.string(
                 lib.Cronet_Error_message_get(error),
@@ -174,7 +191,7 @@ def _on_request_failed(
         ),
         code=lib.Cronet_Error_error_code_get(error),
     )
-    manager.on_request_finished()
+    manager._is_done.set()  # noqa: SLF001
 
 
 @ffi.def_extern()
@@ -184,18 +201,17 @@ def _on_request_canceled(
     response_info: UrlResponseInfo,  # noqa: ARG001
 ) -> None:
     manager = _get_manager(callback)
-    manager.on_request_finished()
+    manager._is_done.set()  # noqa: SLF001
 
 
 class RequestCallbackManager:
     def __init__(
         self,
         request_parameters: RequestParameters,
-        on_request_finished: Callable[[], None],
     ) -> None:
         self._handle = ffi.new_handle(self)
         self._callback: UrlRequestCallback | None = None
-        self.on_request_finished = on_request_finished
+        self._is_done = Event()
         self.request_parameters = request_parameters
 
     async def __aenter__(self) -> Self:
@@ -213,9 +229,10 @@ class RequestCallbackManager:
                 self._handle,
             )
 
-        self.request_error: RequestError | None = None
-        self.response = Response(url=self.request_parameters.url)
-        self.result_error: Error | None = None
+        self._is_done.clear()
+
+        self._error: Exception | None = None
+        self._response: Response | None = None
 
         return self
 
@@ -236,3 +253,16 @@ class RequestCallbackManager:
             raise NotContextManagerError
 
         return self._callback
+
+    async def response(self) -> Response:
+        if not self._is_done.is_set():
+            await self._is_done.wait()
+
+        if self._error is not None:
+            raise self._error
+
+        if self._response is None:
+            message = "Response is unavailable, request may not have finished"
+            raise Error(message)
+
+        return self._response

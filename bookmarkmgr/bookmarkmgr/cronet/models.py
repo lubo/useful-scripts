@@ -13,12 +13,12 @@ class RequestParameters:
 @dataclass(slots=True)
 class Response:
     url: str
+    status_code: int
+    reason: str
     charset: str = "utf-8"
     content: bytes = b""
     headers: Message = field(default_factory=Message)
-    reason: str = ""
-    redirect_url: str = ""
-    status_code: int = 0
+    redirect_url: str | None = None
 
     @property
     def ok(self) -> bool:

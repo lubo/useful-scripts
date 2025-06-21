@@ -143,7 +143,10 @@ def get_fixed_url(response: Response, url: str) -> None | str:
     if response.status_code in NOT_FOUND_STATUS_CODES:
         return _fix_url_trailing_slash(urlparse(url)).geturl()
 
-    if response.status_code not in REDIRECT_STATUS_CODES:
+    if (
+        response.redirect_url is None
+        or response.status_code not in REDIRECT_STATUS_CODES
+    ):
         return None
 
     parsed_url = urlparse(url)

@@ -128,11 +128,6 @@ class Session:
         if params is not None:
             url = str(URL(url).update_query(params))
 
-        executor_manager = ExecutorManager()
-
-        def on_request_finished() -> None:
-            executor_manager.shutdown()
-
         async with (
             adestroying(
                 lib.Cronet_UrlRequestParams_Create(),
@@ -148,9 +143,8 @@ class Session:
                     url=url,
                     **kwargs,
                 ),
-                on_request_finished,
             ) as callback_manager,
-            executor_manager,
+            ExecutorManager() as executor_manager,
         ):
             lib.Cronet_UrlRequestParams_http_method_set(
                 parameters,
@@ -182,13 +176,7 @@ class Session:
 
             _raise_for_error_result(lib.Cronet_UrlRequest_Start(request))
 
-        if callback_manager.result_error is not None:
-            raise callback_manager.result_error
-
-        if callback_manager.request_error is not None:
-            raise callback_manager.request_error
-
-        return callback_manager.response
+            return await callback_manager.response()
 
 
 class RetrySession(Session):
