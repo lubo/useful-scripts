@@ -1,8 +1,9 @@
 import asyncio
-from asyncio import Semaphore, Task, TaskGroup
+from asyncio import Lock, Semaphore, Task, TaskGroup
+from collections.abc import Callable
 import random
 import time
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from .logging import get_logger
 
@@ -87,3 +88,20 @@ class RateLimiterMixin:
             rate_limit,
             rate_limit_period,
         )
+
+
+_GILED_CPU_THREAD_LOCK = Lock()
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+# Runs CPU-bound tasks which don't release the GIL in a dedicated thread.
+async def to_cpu_bound_giled_thread(
+    func: Callable[_P, _R],
+    /,
+    *args: _P.args,
+    **kwargs: _P.kwargs,
+) -> _R:
+    async with _GILED_CPU_THREAD_LOCK:
+        return await asyncio.to_thread(func, *args, **kwargs)

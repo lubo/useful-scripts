@@ -1,10 +1,9 @@
-import asyncio
 from dataclasses import dataclass
 import gc
 from html.parser import HTMLParser
 from http import HTTPStatus
 
-from bookmarkmgr import cronet
+from bookmarkmgr import asyncio, cronet
 from bookmarkmgr.cronet import RequestError, ResponseStatus, Session
 
 INVALID_HTML_PARENTS = {
@@ -118,7 +117,10 @@ async def scrape_page(
 
         nonlocal page
 
-        page = await asyncio.to_thread(_scrape_html, response.text)
+        page = await asyncio.to_cpu_bound_giled_thread(
+            _scrape_html,
+            response.text,
+        )
 
         return page.body_text == "Loading..."  # Rate limit hit
 
