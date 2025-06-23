@@ -1,1 +1,11 @@
-../poetry-run
+#!/bin/bash
+
+set -e
+
+PARENT_DIR=$(dirname "$0")
+
+# Reduces average memory usage 3-4x on Python 3.13.
+export PYTHONMALLOC=mimalloc
+
+# shellcheck source=poetry-run
+source "${PARENT_DIR}/../poetry-run"
