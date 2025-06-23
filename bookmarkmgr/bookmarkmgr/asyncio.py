@@ -3,7 +3,9 @@ from asyncio import Lock, Semaphore, Task, TaskGroup
 from collections.abc import Callable
 import random
 import time
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, cast, ParamSpec, TypeVar
+
+from overrides import override
 
 from .logging import get_logger
 
@@ -13,26 +15,41 @@ logger = get_logger()
 class ForgivingTaskGroup(TaskGroup):
     """TaskGroup that doesn't fail fast on task failure."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    _parent_cancel_requested: bool
 
-        self._parent_cancel_requested = True
+    @override
+    def _is_base_error(self, exc: BaseException) -> bool:
+        return cast(
+            "bool",
+            super()._is_base_error(exc),  # type: ignore[misc]
+        )
 
+    @override
     def _on_task_done(
         self,
         task: Task[Any],
-        *args: Any,
-        **kwargs: Any,
     ) -> None:
-        if not task.cancelled() and (exc := task.exception()) is not None:
-            logger.critical(
-                "Unhandled error occurred in task '%s': %s: %s",
-                task.get_name(),
-                type(exc).__name__,
-                exc,
-            )
+        if (
+            task.cancelled()
+            or (exc := task.exception()) is None
+            or self._is_base_error(exc)
+        ):
+            super()._on_task_done(task)
+            return
 
-        return super()._on_task_done(task, *args, **kwargs)
+        logger.critical(
+            "Unhandled error occurred in task '%s': %s: %s",
+            task.get_name(),
+            type(exc).__name__,
+            exc,
+        )
+
+        parent_cancel_requested = self._parent_cancel_requested
+        self._parent_cancel_requested = True
+
+        super()._on_task_done(task)
+
+        self._parent_cancel_requested = parent_cancel_requested
 
 
 # https://github.com/mjpieters/aiolimiter and
