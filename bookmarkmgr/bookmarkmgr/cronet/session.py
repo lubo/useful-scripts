@@ -176,7 +176,11 @@ class Session:
 
             _raise_for_error_result(lib.Cronet_UrlRequest_Start(request))
 
-            return await callback_manager.response()
+            try:
+                return await callback_manager.response()
+            except:
+                lib.Cronet_UrlRequest_Cancel(request)
+                raise
 
 
 class RetrySession(Session):
