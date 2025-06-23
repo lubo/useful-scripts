@@ -3,11 +3,10 @@
 import argparse
 import asyncio
 from collections.abc import Callable
+import contextlib
 from getpass import getpass
 import logging
-import signal
 import sys
-from types import FrameType
 
 from . import DEBUG
 from .clients.raindrop import RaindropClient
@@ -19,13 +18,6 @@ from .commands.maintain_collection import (
 
 _HOST_RATE_LIMIT_METAVAR = ("hostname", "limit", "period", "jitter")
 _HOST_RATE_LIMIT_NARGS = len(_HOST_RATE_LIMIT_METAVAR)
-
-
-def _sigint_handler(
-    signum: int,  # noqa: ARG001
-    frame: FrameType | None,  # noqa: ARG001
-) -> None:
-    sys.exit(130)
 
 
 def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
@@ -65,9 +57,7 @@ async def run_command(args: argparse.Namespace, raindrop_api_key: str) -> None:
                 )
 
 
-def main() -> None:
-    signal.signal(signal.SIGINT, _sigint_handler)
-
+def _main() -> None:
     logging.basicConfig(
         format=f"%(asctime)s:{logging.BASIC_FORMAT}",
         level=logging.WARNING if DEBUG else logging.ERROR,
@@ -126,6 +116,11 @@ def main() -> None:
     api_key = getpass("Raindrop API Key: ") if sys.stdin.isatty() else input()
 
     asyncio.run(run_command(args, api_key))
+
+
+def main() -> None:
+    with contextlib.suppress(KeyboardInterrupt):
+        _main()
 
 
 if __name__ == "__main__":
