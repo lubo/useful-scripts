@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 import contextlib
 from getpass import getpass
 import logging
@@ -40,6 +41,13 @@ def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
 
 
 async def run_command(args: argparse.Namespace, raindrop_api_key: str) -> None:
+    # Cronet may use a lot of threads.
+    asyncio.get_running_loop().set_default_executor(
+        ThreadPoolExecutor(
+            sys.maxsize,
+        ),
+    )
+
     async with RaindropClient(raindrop_api_key) as raindrop_client:
         match args.command:
             case "export-collection":

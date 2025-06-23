@@ -1,11 +1,7 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
-from typing import Any, Self, TYPE_CHECKING
+from typing import Any, Self
 
-if TYPE_CHECKING:
-    from collections.abc import Awaitable
-
+from bookmarkmgr.asyncio import ForgivingTaskGroup
 from bookmarkmgr.cronet._cronet import ffi, lib
 from bookmarkmgr.cronet.errors import NotContextManagerError
 from bookmarkmgr.cronet.types import Executor, Runnable
@@ -16,15 +12,21 @@ def _executor_execute(executor: Executor, runnable: Runnable) -> None:
     manager: ExecutorManager = ffi.from_handle(
         lib.Cronet_Executor_GetClientContext(executor),
     )
-    manager.enqueue_runnable(runnable)
+    manager.submit_runnable(runnable)
+
+
+def _process_runnable(runnable: Runnable) -> None:
+    try:
+        lib.Cronet_Runnable_Run(runnable)
+    finally:
+        lib.Cronet_Runnable_Destroy(runnable)
 
 
 class ExecutorManager:
     def __init__(self) -> None:
-        self._handle = ffi.new_handle(self)
-        self._queue: Queue[Runnable | None] = Queue()
-        self._worker: Awaitable[None] | None = None
         self._executor: Executor | None = None
+        self._handle = ffi.new_handle(self)
+        self._task_group: ForgivingTaskGroup | None = None
 
     async def __aenter__(self) -> Self:
         if self._executor is None:
@@ -33,10 +35,11 @@ class ExecutorManager:
             )
             lib.Cronet_Executor_SetClientContext(self._executor, self._handle)
 
-        self._processing_allowed = True
+        if self._task_group is None:
+            self._task_group = ForgivingTaskGroup()
+            await self._task_group.__aenter__()
 
-        if self._worker is None:
-            self._worker = asyncio.create_task(self._spawn_worker_thread())
+        self._processing_allowed = True
 
         return self
 
@@ -46,35 +49,32 @@ class ExecutorManager:
         *args: Any,  # noqa: PYI036
         **kwargs: Any,
     ) -> None:
-        self.shutdown(process_pending=exc_type is None)
+        self._processing_allowed = False
 
         try:
-            if self._worker is not None:
-                await self._worker
+            if self._task_group is not None:
+                await self._task_group.__aexit__(exc_type, *args, **kwargs)
+                self._task_group = None
         finally:
             if self._executor is not None:
                 lib.Cronet_Executor_Destroy(self._executor)
                 self._executor = None
 
-            self._worker = None
+    def submit_runnable(self, runnable: Runnable) -> None:
+        if self._task_group is None:
+            message = "ExecutorManager has not been entered"
+            raise RuntimeError(message)
 
-    async def _spawn_worker_thread(self) -> None:
-        with ThreadPoolExecutor() as pool:
-            await asyncio.get_running_loop().run_in_executor(
-                pool,
-                self._worker_loop,
-            )
+        if not self._processing_allowed:
+            lib.Cronet_Runnable_Destroy(runnable)
+            return
 
-    def _worker_loop(self) -> None:
-        while (runnable := self._queue.get()) is not None:
-            try:
-                if self._processing_allowed:
-                    lib.Cronet_Runnable_Run(runnable)
-            finally:
-                lib.Cronet_Runnable_Destroy(runnable)
-
-    def enqueue_runnable(self, runnable: Runnable) -> None:
-        self._queue.put_nowait(runnable)
+        self._task_group.create_task(
+            asyncio.to_thread(
+                _process_runnable,
+                runnable,
+            ),
+        )
 
     @property
     def executor(self) -> Executor:
@@ -82,7 +82,3 @@ class ExecutorManager:
             raise NotContextManagerError
 
         return self._executor
-
-    def shutdown(self, *, process_pending: bool = True) -> None:
-        self._processing_allowed = process_pending
-        self._queue.put_nowait(None)

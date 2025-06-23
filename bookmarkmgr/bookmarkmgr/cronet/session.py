@@ -49,8 +49,10 @@ RETRYABLE_STATUS_CODES = {
 class Session:
     def __init__(self) -> None:
         self._engine: Engine | None = None
+        self._executor_manager = ExecutorManager()
 
     async def __aenter__(self) -> Self:
+        await self._executor_manager.__aenter__()
         self._open()
 
         return self
@@ -60,7 +62,10 @@ class Session:
         *args: Any,  # noqa: PYI036
         **kwargs: Any,
     ) -> None:
-        self.close()
+        try:
+            await self._executor_manager.__aexit__(*args, **kwargs)
+        finally:
+            self._close()
 
     def _dispose_engine(self) -> None:
         if self._engine is None:
@@ -87,7 +92,7 @@ class Session:
             self._dispose_engine()
             raise
 
-    def close(self) -> None:
+    def _close(self) -> None:
         if self._engine is None:
             return
 
@@ -144,7 +149,6 @@ class Session:
                     **kwargs,
                 ),
             ) as callback_manager,
-            ExecutorManager() as executor_manager,
         ):
             lib.Cronet_UrlRequestParams_http_method_set(
                 parameters,
@@ -170,7 +174,7 @@ class Session:
                     url.encode(),
                     parameters,
                     callback_manager.callback,
-                    executor_manager.executor,
+                    self._executor_manager.executor,
                 ),
             )
 
@@ -317,8 +321,8 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
         async with self._RateLimiterMixin_rate_limiter:
             return await super()._request(*args, **kwargs)
 
-    def close(self) -> None:
-        super().close()
+    def _close(self) -> None:
+        super()._close()
 
         self._RateLimiterMixin_rate_limiter.close()
 
@@ -357,8 +361,8 @@ class PerHostnameRateLimitedSession(RetrySession):
         ):
             return await super()._request(method, url, *args, **kwargs)
 
-    def close(self) -> None:
-        super().close()
+    def _close(self) -> None:
+        super()._close()
 
         for rate_limiter in self.__rate_limiters.values():
             rate_limiter.close()
