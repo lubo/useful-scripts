@@ -478,15 +478,15 @@ async def maintain_collection(
     progress_bar_manager = enlighten.get_manager()
 
     async with (
+        get_progress_bar(
+            progress_bar_manager,
+            "Maintaining",
+        ) as maintaining_progress_bar,
         ArchiveTodayClient() as at_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
             host_rate_limits=user_options.host_rate_limits,
         ) as check_session,
-        get_progress_bar(
-            progress_bar_manager,
-            "Maintaining",
-        ) as maintaining_progress_bar,
         ForgivingTaskGroup() as task_group,
         get_progress_bar(
             progress_bar_manager,
