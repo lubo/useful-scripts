@@ -2,7 +2,9 @@ import asyncio
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from contextlib import nullcontext
 from http import HTTPStatus
-from typing import Any, Self, TYPE_CHECKING
+from http.cookiejar import CookieJar
+from itertools import chain
+from typing import Any, cast, Self, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from yarl import URL
@@ -24,6 +26,8 @@ from .models import RequestParameters, Response
 from .utils import adestroying, destroying
 
 if TYPE_CHECKING:
+    from http.client import HTTPResponse
+
     from .types import Engine
 
 INIT_MAX_RETRY_ATTEMPTS = 5
@@ -48,6 +52,7 @@ RETRYABLE_STATUS_CODES = {
 
 class Session:
     def __init__(self) -> None:
+        self._cookie_jar = CookieJar()
         self._engine: Engine | None = None
 
     async def __aenter__(self) -> Self:
@@ -128,6 +133,13 @@ class Session:
         if params is not None:
             url = str(URL(url).update_query(params))
 
+        request_params = RequestParameters(
+            method=method,
+            url=url,
+           **kwargs,
+        )
+        self._cookie_jar.add_cookie_header(request_params)
+
         async with (
             adestroying(
                 lib.Cronet_UrlRequestParams_Create(),
@@ -138,11 +150,7 @@ class Session:
                 lib.Cronet_UrlRequest_Destroy,
             ) as request,
             RequestCallbackManager(
-                RequestParameters(
-                    method=method,
-                    url=url,
-                    **kwargs,
-                ),
+                request_params,
             ) as callback_manager,
             ExecutorManager() as executor_manager,
         ):
@@ -150,7 +158,10 @@ class Session:
                 parameters,
                 method.encode(),
             )
-            for name, value in DEFAULT_HEADERS:
+            for name, value in chain(
+                DEFAULT_HEADERS,
+                request_params.headers.items(),
+            ):
                 with destroying(
                     lib.Cronet_HttpHeader_Create(),
                     lib.Cronet_HttpHeader_Destroy,
@@ -177,10 +188,17 @@ class Session:
             _raise_for_error_result(lib.Cronet_UrlRequest_Start(request))
 
             try:
-                return await callback_manager.response()
+                response = await callback_manager.response()
             except:
                 lib.Cronet_UrlRequest_Cancel(request)
                 raise
+
+        self._cookie_jar.extract_cookies(
+            cast("HTTPResponse", response),
+            request_params,
+        )
+
+        return response
 
 
 class RetrySession(Session):

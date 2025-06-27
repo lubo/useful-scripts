@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from email.message import Message
 from http import HTTPStatus
+from typing import Any
+from urllib.request import Request
 
 
 @dataclass(slots=True)
@@ -16,11 +18,20 @@ class ResponseStatus:
         )
 
 
-@dataclass(slots=True)
-class RequestParameters:
-    method: str
-    url: str
-    allow_redirects: bool = True
+class RequestParameters(Request):
+    def __init__(
+            self,
+            *args: Any,
+            allow_redirects: bool = True,
+            **kwargs: Any,
+        ) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.allow_redirects = allow_redirects
+
+    @property
+    def url(self) -> str:
+        return self.full_url
 
 
 @dataclass(slots=True)
@@ -31,6 +42,9 @@ class Response(ResponseStatus):
     content: bytes = b""
     headers: Message = field(default_factory=Message)
     redirect_url: str | None = None
+
+    def info(self) -> Message:
+        return self.headers
 
     @property
     def text(self) -> str:
