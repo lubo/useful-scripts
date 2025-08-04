@@ -85,6 +85,19 @@ class Session:
                 lib.Cronet_EngineParams_Create(),
                 lib.Cronet_EngineParams_Destroy,
             ) as params:
+                lib.Cronet_EngineParams_enable_brotli_set(
+                    params,
+                    True,  # noqa: FBT003
+                )
+                lib.Cronet_EngineParams_enable_http2_set(
+                    params,
+                    True,  # noqa: FBT003
+                )
+                lib.Cronet_EngineParams_enable_quic_set(
+                    params,
+                    True,  # noqa: FBT003
+                )
+
                 _raise_for_error_result(
                     lib.Cronet_Engine_StartWithParams(self._engine, params),
                 )
