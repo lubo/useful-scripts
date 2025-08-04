@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         self.send_response(HTTPStatus.OK.value)
         self.end_headers()
         self.wfile.write(b"<script>window.close()</script>")

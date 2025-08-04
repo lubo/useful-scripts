@@ -136,7 +136,7 @@ class Session:
         request_params = RequestParameters(
             method=method,
             url=url,
-           **kwargs,
+            **kwargs,
         )
         self._cookie_jar.add_cookie_header(request_params)
 

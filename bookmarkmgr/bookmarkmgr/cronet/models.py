@@ -20,11 +20,11 @@ class ResponseStatus:
 
 class RequestParameters(Request):
     def __init__(
-            self,
-            *args: Any,
-            allow_redirects: bool = True,
-            **kwargs: Any,
-        ) -> None:
+        self,
+        *args: Any,
+        allow_redirects: bool = True,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
 
         self.allow_redirects = allow_redirects
