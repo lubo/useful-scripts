@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# Fixes stuck touchpad on my Dell XPS 13 9360.
+
+set -e
+
+MODULE=i2c_hid_acpi
+
+sudo rmmod "${MODULE}"
+sudo modprobe "${MODULE}"
