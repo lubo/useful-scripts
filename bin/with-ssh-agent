@@ -19,8 +19,35 @@ interact
 '
 
 main() {
+	if [[ ! "${WITH_SSH_AGENT}" ]]; then
+		export WITH_SSH_AGENT=1
+
+		# User namespace isn't used to preserve ownerships.
+		exec sudo \
+			--preserve-env \
+			-- \
+			unshare \
+			--mount \
+			-- \
+			"$0" "$@"
+	fi
+
 	if [[ ! "${SSH_AGENT_PID}" ]]; then
-		exec ssh-agent -- "$0" "$@"
+		GID=$(id -g "${SUDO_UID}")
+
+		mount \
+			--options "mode=0700,uid=${SUDO_UID},gid=${GID}" \
+			--types tmpfs \
+			tmpfs \
+			~/.ssh/agent
+
+		exec sudo \
+			--preserve-env \
+			--user "${USERNAME}" \
+			-- \
+			ssh-agent \
+			-- \
+			"$0" "$@"
 	fi
 
 	ssh-add || true
