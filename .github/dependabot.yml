@@ -15,7 +15,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: daily
     groups:
       all:
         patterns:
@@ -47,7 +47,7 @@ updates:
   - package-ecosystem: pip
     directory: /bookmarkmgr
     schedule:
-      interval: monthly
+      interval: daily
     groups:
       all:
         patterns:
@@ -79,7 +79,7 @@ updates:
   - package-ecosystem: pip
     directory: /bookmarks4diff
     schedule:
-      interval: monthly
+      interval: daily
     groups:
       all:
         patterns:
@@ -111,7 +111,7 @@ updates:
   - package-ecosystem: pip
     directory: /ytm
     schedule:
-      interval: monthly
+      interval: daily
     groups:
       all:
         patterns:
