@@ -9,6 +9,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types:
+          - version-update:semver-minor
           - version-update:semver-patch
     commit-message:
       prefix: CI
@@ -26,7 +27,6 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
-          - version-update:semver-minor
     commit-message:
       prefix: CI
     # Makes it possible to have another config. for the same dir.
@@ -41,6 +41,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types:
+          - version-update:semver-minor
           - version-update:semver-patch
     commit-message:
       prefix: bookmarkmgr
@@ -58,7 +59,6 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
-          - version-update:semver-minor
     commit-message:
       prefix: bookmarkmgr
     # Makes it possible to have another config. for the same dir.
@@ -73,6 +73,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types:
+          - version-update:semver-minor
           - version-update:semver-patch
     commit-message:
       prefix: bookmarks4diff
@@ -90,7 +91,6 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
-          - version-update:semver-minor
     commit-message:
       prefix: bookmarks4diff
     # Makes it possible to have another config. for the same dir.
@@ -105,6 +105,7 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types:
+          - version-update:semver-minor
           - version-update:semver-patch
     commit-message:
       prefix: ytm
@@ -122,7 +123,6 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
-          - version-update:semver-minor
     commit-message:
       prefix: ytm
     # Makes it possible to have another config. for the same dir.
