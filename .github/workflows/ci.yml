@@ -9,11 +9,11 @@ jobs:
       contents: read
       statuses: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: super-linter/super-linter/slim@b92721f792f381cedc002ecdbb9847a15ece5bb8 #v7.1.0
+      - uses: super-linter/super-linter/slim@v7.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON_BLACK: false
@@ -30,7 +30,7 @@ jobs:
       run:
         working-directory: bookmarkmgr
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - run: sudo apt-get update
