@@ -1,12 +1,10 @@
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, TypeVar
-
-_T = TypeVar("_T")
+from typing import Any
 
 
 @contextmanager
-def destroying(obj: _T, destroyer: Callable[[_T], Any]) -> Iterator[_T]:
+def destroying[T](obj: T, destroyer: Callable[[T], Any]) -> Iterator[T]:
     try:
         yield obj
     finally:
@@ -14,9 +12,9 @@ def destroying(obj: _T, destroyer: Callable[[_T], Any]) -> Iterator[_T]:
 
 
 @asynccontextmanager
-async def adestroying(
-    obj: _T,
-    destroyer: Callable[[_T], Any],
-) -> AsyncIterator[_T]:
+async def adestroying[T](
+    obj: T,
+    destroyer: Callable[[T], Any],
+) -> AsyncIterator[T]:
     with destroying(obj, destroyer) as d:
         yield d
