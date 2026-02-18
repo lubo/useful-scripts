@@ -14,7 +14,9 @@ trap {
 	stty rows $rows columns $cols < $spawn_out(slave,name)
 } WINCH
 spawn -noecho "$env(SHELL)" -i
+stty -echo < $spawn_out(slave,name)
 send "PS1=\"(ssh-agent) \${PS1}\"\n"
+stty echo < $spawn_out(slave,name)
 interact
 '
 
