@@ -30,6 +30,7 @@ main() {
 			-- \
 			unshare \
 			--mount \
+			--propagation private \
 			-- \
 			"$0" "$@"
 	fi
