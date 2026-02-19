@@ -13,6 +13,8 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: CI
+    cooldown:
+      default-days: 2
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -32,6 +34,8 @@ updates:
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /bookmarkmgr
     schedule:
@@ -45,6 +49,8 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: bookmarkmgr
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /bookmarkmgr
     schedule:
@@ -64,6 +70,8 @@ updates:
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /bookmarks4diff
     schedule:
@@ -77,6 +85,8 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: bookmarks4diff
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /bookmarks4diff
     schedule:
@@ -96,6 +106,8 @@ updates:
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /ytm
     schedule:
@@ -109,6 +121,8 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: ytm
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /ytm
     schedule:
@@ -128,3 +142,5 @@ updates:
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
+    cooldown:
+      default-days: 2

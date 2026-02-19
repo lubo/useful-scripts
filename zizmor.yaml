@@ -1,0 +1,10 @@
+rules:
+  dependabot-cooldown:
+    config:
+      days: 2
+  # From https://docs.github.com/en/actions/reference/security/secure-use#monitoring-the-actions-in-your-workflows:
+  #
+  # "Dependabot only creates alerts for vulnerable actions that use semantic
+  # versioning and will not create alerts for actions pinned to SHA values."
+  unpinned-uses:
+    disable: true
