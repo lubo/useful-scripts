@@ -29,7 +29,7 @@ commit_changes() {
 
 	git add "${MUSIC_LIBRARY_DATABASE_PATH}"
 
-	with-ssh-agent git commit -m "Update database" >/dev/null
+	git commit -m "Update database" >/dev/null
 
 	echo "Library database updated. Don't forget to push after reviewing" \
 		"the changes."
