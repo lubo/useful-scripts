@@ -8,6 +8,7 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
+playwright = "^1.58.0"
 python = "^3.12"
 yt-dlp = ">=2025.1.26"  # https://github.com/ytdl-org/youtube-dl/issues/29494
 ytmusicapi = "^1.11.5"

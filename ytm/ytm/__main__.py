@@ -3,17 +3,20 @@
 
 import argparse
 import csv
-from getpass import getpass
-import json
 import operator
 from pathlib import Path
+import shutil
 import sys
+from urllib.parse import urlsplit
 
+from playwright.sync_api import sync_playwright
 from yt_dlp import YoutubeDL
+import ytmusicapi
 from ytmusicapi import YTMusic
-from ytmusicapi.auth.oauth import OAuthCredentials
 
 GET_LIMIT = None
+
+PLATWRIGHT_TIMEOUT = 5 * 60 * 1000
 
 
 def get_song_entry(song):
@@ -145,15 +148,6 @@ def sync_playlist(client, playlist_id):
 
 def main():
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument(
-        "oauth_client_id",
-        help="OAuth Client ID",
-    )
-    arg_parser.add_argument(
-        "user_credentials",
-        help="File containing user OAuth credentials",
-        type=argparse.FileType(),
-    )
     subparsers = arg_parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser(
         "download-library",
@@ -174,25 +168,46 @@ def main():
 
     args = arg_parser.parse_args()
 
-    with args.user_credentials:
-        user_credentials = json.loads(args.user_credentials.read())
+    with (
+        sync_playwright() as playwright,
+        playwright.chromium.launch_persistent_context(
+            user_data_dir=Path.home() / ".config/ytm-google-chrome",
+            executable_path=shutil.which("google-chrome-stable"),
+            args=[
+                # Required for Google authentication.
+                "--disable-blink-features=AutomationControlled",
+            ],
+            # Required to prevent bot detection and to perform manual actions
+            # when necessary.
+            headless=False,
+            # The default is insecure.
+            chromium_sandbox=True,
+        ) as browser,
+    ):
+        # Reuses the default tab.
+        page = browser.pages[0]
 
-    try:
-        oauth_client_secret = (
-            getpass("OAuth Client Secret: ") if sys.stdin.isatty() else input()
+        with page.expect_response(
+            lambda response: (
+                response.request.method == "POST"
+                and urlsplit(response.url)[:3]
+                == ("https", "music.youtube.com", "/youtubei/v1/browse")
+            ),
+            timeout=PLATWRIGHT_TIMEOUT,
+        ) as response_info:
+            page.goto(
+                "https://music.youtube.com/library",
+                timeout=PLATWRIGHT_TIMEOUT,
+            )
+
+        headers = "\n".join(
+            f"{header['name']}: {header['value']}"
+            for header in response_info.value.request.headers_array()
         )
-    except EOFError:
-        print(  # noqa: T201
-            "OAuth Client Secret could not be read.",
-            file=sys.stderr,
-        )
-        return 1
 
     client = YTMusic(
-        user_credentials,
-        oauth_credentials=OAuthCredentials(
-            args.oauth_client_id,
-            oauth_client_secret,
+        ytmusicapi.setup(
+            headers_raw=headers,
         ),
     )
 
