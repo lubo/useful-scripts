@@ -54,16 +54,7 @@ def download_library(client):
     dest_dir = Path.home() / "Music"
     downloader = YoutubeDL(
         {
-            "extractor_args": {
-                "youtube": {
-                    "formats": ["missing_pot"],
-                    "player_client": ["web_music"],
-                },
-            },
-            "format": "141",
-            "http_headers": {
-                "Authorization": client.headers["authorization"],
-            },
+            "format": "140",
             "paths": {
                 "home": str(dest_dir),
             },
