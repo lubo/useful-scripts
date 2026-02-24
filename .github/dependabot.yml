@@ -4,36 +4,8 @@ updates:
     directory: /
     schedule:
       interval: daily
-    allow:
-      - dependency-type: all
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-minor
-          - version-update:semver-patch
     commit-message:
       prefix: CI
-    cooldown:
-      default-days: 2
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: daily
-    groups:
-      all-packages:
-        patterns:
-          - "*"
-    allow:
-      - dependency-type: all
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
-    commit-message:
-      prefix: CI
-    # Makes it possible to have another config. for the same dir.
-    # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
-    target-branch: master
     cooldown:
       default-days: 2
   - package-ecosystem: pip
