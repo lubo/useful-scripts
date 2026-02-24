@@ -10,7 +10,7 @@ authors = []
 [tool.poetry.dependencies]
 python = "^3.12"
 yt-dlp = ">=2025.1.26"  # https://github.com/ytdl-org/youtube-dl/issues/29494
-ytmusicapi = "^1.10.3"
+ytmusicapi = "^1.11.5"
 
 [tool.poetry.scripts]
 ytm = "ytm.__main__:main"
