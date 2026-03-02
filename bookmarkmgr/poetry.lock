@@ -212,14 +212,14 @@ files = [
 
 [[package]]
 name = "blessed"
-version = "1.30.0"
+version = "1.31.0"
 description = "Easy, practical library for making terminal apps, by providing an elegant, well-documented interface to Colors, Keyboard input, and screen Positioning capabilities."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "blessed-1.30.0-py3-none-any.whl", hash = "sha256:4061a9f10dd22798716c2548ba36385af6a29d856c897f367c6ccc927e0b3a5a"},
-    {file = "blessed-1.30.0.tar.gz", hash = "sha256:4d547019d7b40fc5420ea2ba2bc180fdccc31d6715298e2b49ffa7b020d44667"},
+    {file = "blessed-1.31.0-py3-none-any.whl", hash = "sha256:f8e4e52012d69031da4af1ba357da941e2c4c7a941526f240f035809287c82c2"},
+    {file = "blessed-1.31.0.tar.gz", hash = "sha256:a4e253e9f44a046a2231387911d1ffc54cd20605f833b7289b16ae7b2f11235a"},
 ]
 
 [package.dependencies]
