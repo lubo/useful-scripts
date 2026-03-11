@@ -64,6 +64,10 @@ def check_link_status(
                     r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
                     scraper_result.page.title,
                 )
+                or re.fullmatch(
+                    r"(Video Disabled) - [a-zA-Z.]{11}",
+                    scraper_result.page.title,
+                )
             ) is not None:
                 link_status = LinkStatus.BROKEN
                 error = match.group(1)
