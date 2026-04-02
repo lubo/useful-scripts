@@ -380,7 +380,8 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
             or datetime.now(tz=UTC) > last_check + timedelta(weeks=1)
         )
         and (
-            "possibly-broken" in raindrop["tags"]
+            "blocked" in raindrop["tags"]
+            or "possibly-broken" in raindrop["tags"]
             or datetime.now(tz=UTC) > last_check + timedelta(days=1)
         )
     ):
