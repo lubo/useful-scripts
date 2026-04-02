@@ -1,8 +1,8 @@
-from asyncio import Event
 import contextlib
 from http import HTTPStatus
 from typing import Any, cast, Self
 
+from bookmarkmgr.asyncio import ThreadSafeEvent
 from bookmarkmgr.cronet._cronet import ffi, lib
 from bookmarkmgr.cronet.errors import (
     _raise_for_error_result,
@@ -211,7 +211,7 @@ class RequestCallbackManager:
     ) -> None:
         self._handle = ffi.new_handle(self)
         self._callback: UrlRequestCallback | None = None
-        self._is_done = Event()
+        self._is_done = ThreadSafeEvent()
         self.request_parameters = request_parameters
 
     async def __aenter__(self) -> Self:

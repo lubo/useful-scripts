@@ -1,5 +1,5 @@
 import asyncio
-from asyncio import Lock, Semaphore, Task, TaskGroup
+from asyncio import AbstractEventLoop, Event, Lock, Semaphore, Task, TaskGroup
 from collections.abc import Callable
 import random
 import time
@@ -105,6 +105,25 @@ class RateLimiterMixin:
             rate_limit,
             rate_limit_period,
         )
+
+
+class ThreadSafeEvent(Event):
+    """CAVEAT: clear() and set() don't take effect immediately."""
+
+    _loop: AbstractEventLoop
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        self._loop = asyncio.get_event_loop()
+
+    @override
+    def clear(self) -> None:
+        self._loop.call_soon_threadsafe(super().clear)
+
+    @override
+    def set(self) -> None:
+        self._loop.call_soon_threadsafe(super().set)
 
 
 _GILED_CPU_THREAD_LOCK = Lock()
