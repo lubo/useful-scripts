@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from email.message import Message
 from http import HTTPStatus
+import json
 from typing import Any
 from urllib.request import Request
 
@@ -45,6 +46,9 @@ class Response(ResponseStatus):
 
     def info(self) -> Message:
         return self.headers
+
+    def json(self) -> Any:
+        return json.loads(self.text)
 
     @property
     def text(self) -> str:
