@@ -41,7 +41,7 @@ jobs:
               || ''
             }}"
           } >> "${GITHUB_OUTPUT}"
-      - uses: super-linter/super-linter/slim@v8.5.0
+      - uses: super-linter/super-linter/slim@v8.6.0
         env:
           FILTER_REGEX_EXCLUDE: >-
             ^${{
