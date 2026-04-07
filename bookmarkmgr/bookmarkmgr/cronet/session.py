@@ -1,6 +1,5 @@
 import asyncio
 from collections.abc import Awaitable, Callable, Iterable, Mapping
-from contextlib import nullcontext
 from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
@@ -363,7 +362,6 @@ class PerHostnameRateLimitedSession(RetrySession):
     ) -> None:
         super().__init__(*args, **kwargs)
 
-        self.__null_context = nullcontext()
         self.__rate_limiters = {
             hostname.lower(): RateLimiter(limit, period, jitter)
             for hostname, limit, period, jitter in host_rate_limits
@@ -382,10 +380,12 @@ class PerHostnameRateLimitedSession(RetrySession):
             message = "Missing hostname in the URL"
             raise ValueError(message)
 
-        async with self.__rate_limiters.get(
-            parsed_url.hostname.lower(),
-            self.__null_context,
-        ):
+        hostname = parsed_url.hostname.lower()
+
+        if hostname not in self.__rate_limiters:
+            self.__rate_limiters[hostname] = RateLimiter(1, 1)
+
+        async with self.__rate_limiters[hostname]:
             return await super()._request(method, url, *args, **kwargs)
 
     def close(self) -> None:
