@@ -7,7 +7,8 @@ from datetime import datetime, timedelta, UTC
 from functools import partial
 from typing import Any
 
-import enlighten
+from tqdm import tqdm
+from tqdm.contrib.logging import tqdm_logging_redirect
 
 from bookmarkmgr import cronet, scraper
 from bookmarkmgr.asyncio import ForgivingTaskGroup
@@ -66,33 +67,36 @@ class MaintainCollectionOptions:
 
 @asynccontextmanager
 async def get_progress_bar(
-    manager: enlighten.Manager,
     description: str,
     **kwargs: Any,
-) -> AsyncIterator[enlighten.Counter]:
-    progress_bar = manager.counter(
-        desc=description,
-        unit="links",
-        **kwargs,
-    )
+) -> AsyncIterator[tqdm[Any]]:
     stop_refreshing = False
 
-    async def refresh() -> None:
-        while True:
-            if stop_refreshing:
-                progress_bar.close()
-                break
+    with tqdm_logging_redirect(
+        desc=description,
+        unit=" links",
+        **kwargs,
+    ) as progress_bar:
+        # Custom refresh task is used because tqdm cannot refresh the progress
+        # bar every second.
+        # https://github.com/tqdm/tqdm/issues/861
+        progress_bar.monitor_interval = 0
 
-            progress_bar.refresh()
+        async def refresh() -> None:
+            while True:
+                if stop_refreshing:
+                    break
 
-            await asyncio.sleep(1)
+                progress_bar.refresh()
 
-    refresh_task = asyncio.create_task(refresh())
-    try:
-        yield progress_bar
-    finally:
-        stop_refreshing = True
-        await refresh_task
+                await asyncio.sleep(1)
+
+        refresh_task = asyncio.create_task(refresh())
+        try:
+            yield progress_bar
+        finally:
+            stop_refreshing = True
+            await refresh_task
 
 
 async def process_archival_result(
@@ -476,11 +480,9 @@ async def maintain_collection(
     items = raindrop_client.get_collection_items(collection_id)
 
     duplicate_checker = DuplicateLinkChecker()
-    progress_bar_manager = enlighten.get_manager()
 
     async with (
         get_progress_bar(
-            progress_bar_manager,
             "Maintaining",
         ) as maintaining_progress_bar,
         ArchiveTodayClient() as at_client,
@@ -490,7 +492,6 @@ async def maintain_collection(
         ) as check_session,
         ForgivingTaskGroup() as task_group,
         get_progress_bar(
-            progress_bar_manager,
             "  Loading",
             leave=False,
         ) as loading_progress_bar,
@@ -499,10 +500,10 @@ async def maintain_collection(
         def on_task_done(
             task: asyncio.Task[Any],  # noqa: ARG001
         ) -> None:
-            maintaining_progress_bar.count += 1
+            maintaining_progress_bar.update(1)
 
         async for item in items:
-            loading_progress_bar.count += 1
+            loading_progress_bar.update(1)
 
             task = task_group.create_task(
                 maintain_raindrop(
@@ -520,7 +521,7 @@ async def maintain_collection(
 
             await asyncio.sleep(0)
 
-        maintaining_progress_bar.total = loading_progress_bar.count
+        maintaining_progress_bar.total = loading_progress_bar.n
 
         duplicate_checker.set_required_link_count(
             maintaining_progress_bar.total,
