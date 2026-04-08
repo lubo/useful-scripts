@@ -1,12 +1,12 @@
 from enum import IntEnum, unique
-from functools import partial
 from http import HTTPStatus
 import itertools
 import re
-from typing import Any, Protocol
+from typing import Any, cast, Protocol
 from urllib.parse import ParseResult, quote, urlparse
 
-from tld import get_fld
+import tld
+from tld import get_tld
 
 from bookmarkmgr import scraper
 from bookmarkmgr.cronet import RequestError
@@ -23,11 +23,26 @@ NOT_FOUND_STATUS_CODES = {
     HTTPStatus.GONE.value,
 }
 
-_get_fld_lax = partial(
-    get_fld,
-    fail_silently=True,
-    fix_protocol=True,
-)
+
+def _get_tld_result_lax(url: str) -> tld.Result | None:
+    return cast(
+        "tld.Result | None",
+        get_tld(
+            url,
+            as_object=True,
+            fail_silently=True,
+            fix_protocol=True,
+        ),
+    )
+
+
+def _remove_www_subdomain(domain: str) -> str:
+    return re.sub(
+        r"^www\d*(\.|$)",
+        "",
+        domain,
+        flags=re.IGNORECASE,
+    )
 
 
 @unique
@@ -111,10 +126,19 @@ def _fix_url_subdomain(
     ):
         return url
 
-    if _get_fld_lax(url.hostname) == _get_fld_lax(redirect_url.hostname):
-        return url._replace(netloc=redirect_url.netloc)
+    original_domain = _get_tld_result_lax(url.hostname)
+    redirect_domain = _get_tld_result_lax(redirect_url.hostname)
 
-    return url
+    if (
+        original_domain is None
+        or redirect_domain is None
+        or original_domain.fld != redirect_domain.fld
+        or _remove_www_subdomain(original_domain.subdomain)
+        != _remove_www_subdomain(redirect_domain.subdomain)
+    ):
+        return url
+
+    return url._replace(netloc=redirect_url.netloc)
 
 
 def _fix_url_trailing_slash(
