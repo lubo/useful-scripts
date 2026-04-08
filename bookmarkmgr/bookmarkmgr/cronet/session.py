@@ -51,7 +51,7 @@ RETRYABLE_STATUS_CODES = {
 
 class Session:
     def __init__(self) -> None:
-        self._cookie_jar = CookieJar()
+        self.cookie_jar = CookieJar()
         self._engine: Engine | None = None
 
     async def __aenter__(self) -> Self:
@@ -150,7 +150,7 @@ class Session:
             url=url,
             **kwargs,
         )
-        self._cookie_jar.add_cookie_header(request_params)
+        self.cookie_jar.add_cookie_header(request_params)
 
         async with (
             adestroying(
@@ -210,7 +210,7 @@ class Session:
                 lib.Cronet_UrlRequest_Cancel(request)
                 raise
 
-        self._cookie_jar.extract_cookies(
+        self.cookie_jar.extract_cookies(
             cast("HTTPResponse", response),
             request_params,
         )

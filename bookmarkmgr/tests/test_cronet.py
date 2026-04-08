@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from http.cookiejar import Cookie
 
 import pytest
 import pytest_asyncio
@@ -8,13 +9,40 @@ from bookmarkmgr.cronet import Session
 
 @pytest_asyncio.fixture(scope="session")
 async def cronet_session() -> AsyncIterator[Session]:
-    async with Session() as session:
+    session = Session()
+
+    for name, value in [("foo", "bar"), ("bar", "foo")]:
+        session.cookie_jar.set_cookie(
+            Cookie(
+                version=0,
+                name=name,
+                value=value,
+                port=None,
+                port_specified=False,
+                domain="browserleaks.com",
+                domain_specified=True,
+                domain_initial_dot=True,
+                path="",
+                path_specified=False,
+                secure=False,
+                expires=None,
+                discard=False,
+                comment=None,
+                comment_url=None,
+                rest={},
+            ),
+        )
+
+    async with session:
         yield session
 
 
 @pytest.mark.asyncio
 async def test_http2_fingerprint(cronet_session: Session) -> None:
-    response = await cronet_session.get("https://tls.browserleaks.com/http2")
+    response = await cronet_session.get(
+        "https://tls.browserleaks.com/http2",
+        allow_redirects=False,
+    )
 
     # Chrome 146
     expected = "52d84b11737d980aef856699f885ca86"
@@ -26,9 +54,15 @@ async def test_http2_fingerprint(cronet_session: Session) -> None:
 @pytest.mark.asyncio
 async def test_quic_fingerprint(cronet_session: Session) -> None:
     # Necessary for the next request to be upgraded to QUIC.
-    await cronet_session.get("https://quic.browserleaks.com/")
+    await cronet_session.get(
+        "https://quic.browserleaks.com/",
+        allow_redirects=False,
+    )
 
-    response = await cronet_session.get("https://quic.browserleaks.com/")
+    response = await cronet_session.get(
+        "https://quic.browserleaks.com/",
+        allow_redirects=False,
+    )
     fingerprints = response.json()
 
     # Chrome 146
@@ -43,7 +77,10 @@ async def test_quic_fingerprint(cronet_session: Session) -> None:
 
 @pytest.mark.asyncio
 async def test_tls_fingerprint(cronet_session: Session) -> None:
-    response = await cronet_session.get("https://tls.browserleaks.com/tls")
+    response = await cronet_session.get(
+        "https://tls.browserleaks.com/tls",
+        allow_redirects=False,
+    )
     fingerprints = response.json()
 
     # Chrome 146
