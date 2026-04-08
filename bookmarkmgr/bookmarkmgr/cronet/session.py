@@ -172,6 +172,11 @@ class Session:
             )
             for name, value in chain(
                 DEFAULT_HEADERS,
+                # We currently don't have a way to change headers for
+                # redirected requests.
+                []
+                if request_params.allow_redirects
+                else request_params.unredirected_hdrs.items(),
                 request_params.headers.items(),
             ):
                 with destroying(
