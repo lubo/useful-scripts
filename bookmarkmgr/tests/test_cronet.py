@@ -48,7 +48,7 @@ async def test_http2_fingerprint(cronet_session: Session) -> None:
     expected = "52d84b11737d980aef856699f885ca86"
     actual = response.json().get("akamai_hash")
 
-    assert expected == actual
+    assert actual == expected
 
 
 @pytest.mark.asyncio
@@ -72,7 +72,7 @@ async def test_quic_fingerprint(cronet_session: Session) -> None:
     }
     actual = {key: fingerprints.get(key) for key in expected}
 
-    assert expected == actual
+    assert actual == expected
 
 
 @pytest.mark.asyncio
@@ -90,4 +90,4 @@ async def test_tls_fingerprint(cronet_session: Session) -> None:
     }
     actual = {key: fingerprints.get(key) for key in expected}
 
-    assert expected == actual
+    assert actual == expected
