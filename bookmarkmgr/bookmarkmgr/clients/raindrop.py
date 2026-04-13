@@ -51,7 +51,9 @@ async def _generator_from_worker_queue(
     await worker
 
 
-class RaindropClient(ClientSessionContextManagerMixin):
+class RaindropClient(
+    ClientSessionContextManagerMixin[RateLimitedRetryClientSession],
+):
     def __init__(self, api_key: str) -> None:
         self._session = RateLimitedRetryClientSession(
             "https://api.raindrop.io",

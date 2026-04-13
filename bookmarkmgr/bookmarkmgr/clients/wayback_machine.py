@@ -27,7 +27,9 @@ class WaybackMachineError(Exception):
     pass
 
 
-class WaybackMachineClient(ClientSessionContextManagerMixin):
+class WaybackMachineClient(
+    ClientSessionContextManagerMixin[RateLimitedRetryClientSession],
+):
     def __init__(self) -> None:
         self._session = RateLimitedRetryClientSession(
             # $ for i in $(seq 25); do netcat web.archive.org 443 &; done; wait

@@ -32,7 +32,7 @@ def _extract_text(html: str) -> str:
     return text
 
 
-class ArchiveTodayClient(ClientSessionContextManagerMixin):
+class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
     def __init__(self) -> None:
         self._session = RateLimitedSession(
             rate_limit=6,

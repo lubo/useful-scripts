@@ -33,7 +33,7 @@ class TypedDefaultsDict[
     DefaultsDict[_TypedDict_KT, _TypedDict_VT],
 ):
     data: TypedDefaultsDict_Data_T  # type: ignore[assignment]
-    defaults: TypedDefaultsDict_Defaults_T
+    defaults: TypedDefaultsDict_Defaults_T  # type: ignore[mutable-override]
 
     def __init__(
         self,
