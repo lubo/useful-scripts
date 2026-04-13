@@ -307,7 +307,7 @@ class RetrySession(Session):
 
             if error is not None:
                 log_function = (
-                    logger.warn
+                    logger.warning
                     if attempt % (INIT_MAX_RETRY_ATTEMPTS * 2) == 0
                     else logger.debug
                 )
