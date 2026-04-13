@@ -57,12 +57,20 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
                         match attrs_dict.get("hreflang"):
                             case "x-default":
                                 page.default_lang_url = attrs_dict.get("href")
+                            case _:
+                                pass
                     case "canonical":
                         page.canonical_url = attrs_dict.get("href")
+                    case _:
+                        pass
             case "meta":
                 match attrs_dict.get("property"):
                     case "og:url":
                         page.og_url = attrs_dict.get("content")
+                    case _:
+                        pass
+            case _:
+                pass
 
     def handle_data(data: str) -> None:
         match path:
@@ -70,6 +78,8 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
                 page.body_text = data.strip()
             case ["html", "head", "title"]:
                 page.title = data.strip()
+            case _:
+                pass
 
     def handle_endtag(tag: str) -> None:
         if len(path) > 0 and path[-1] == tag:

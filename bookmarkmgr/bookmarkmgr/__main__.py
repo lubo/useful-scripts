@@ -33,8 +33,8 @@ def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
                 return int(value)
             case 2 | 3:
                 return float(value)
-
-        return value
+            case _:
+                return value
 
     return parse
 
@@ -55,6 +55,8 @@ async def run_command(args: argparse.Namespace, raindrop_api_key: str) -> None:
                         args.no_checks,
                     ),
                 )
+            case _:
+                pass  # Command is not type-checked.
 
 
 def _main() -> None:

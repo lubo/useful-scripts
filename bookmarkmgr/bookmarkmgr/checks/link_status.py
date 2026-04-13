@@ -88,6 +88,8 @@ def check_link_status(
                 error = match.group(1)
         case HTTPStatus.UNAUTHORIZED.value | HTTPStatus.FORBIDDEN.value:
             link_status = LinkStatus.BLOCKED
+        case _:
+            pass
 
     if error is not None or (
         scraper_result.response.ok
