@@ -1,7 +1,7 @@
 import asyncio
 from http import HTTPStatus
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, override
 
 from aiohttp import (
     ClientConnectionError,
@@ -14,7 +14,6 @@ from aiohttp import (
     TraceRequestExceptionParams,
 )
 from aiohttp_retry import ExponentialRetry, RetryClient
-from overrides import override
 
 from .asyncio import RateLimiterMixin
 from .logging import get_logger
@@ -90,6 +89,7 @@ class RateLimitRetry(ExponentialRetry):
 
         self.__rate_limit_timeout = rate_limit_timeout
 
+    @override
     def get_timeout(
         self,
         attempt: int,

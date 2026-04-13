@@ -6,6 +6,9 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_decorators = true
 disallow_untyped_defs = true
+enable_error_code = [
+    "explicit-override",
+]
 explicit_package_bases = true
 extra_checks = true
 no_implicit_reexport = true

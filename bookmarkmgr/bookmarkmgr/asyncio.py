@@ -3,9 +3,9 @@ from asyncio import AbstractEventLoop, Event, Lock, Semaphore, Task, TaskGroup
 from collections.abc import Callable
 import random
 import time
-from typing import Any, cast
+from typing import Any, cast, override
 
-from overrides import override
+from overrides import override as runtime_override
 
 from .logging import get_logger
 
@@ -17,7 +17,7 @@ class ForgivingTaskGroup(TaskGroup):
 
     _parent_cancel_requested: bool
 
-    @override
+    @runtime_override
     def _is_base_error(self, exc: BaseException) -> bool:
         return cast(
             "bool",

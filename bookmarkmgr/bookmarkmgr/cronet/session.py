@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable, Iterable, Mapping
 from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
-from typing import Any, cast, Self, TYPE_CHECKING
+from typing import Any, cast, override, Self, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from yarl import URL
@@ -245,6 +245,7 @@ class RetrySession(Session):
 
         return await super().request(method, url, *args, **kwargs)
 
+    @override
     async def request(  # noqa: C901
         self,
         method: str,
@@ -348,10 +349,12 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
             rate_limit_timeout=rate_limit_period,
         )
 
+    @override
     async def _request(self, *args: Any, **kwargs: Any) -> Response:
         async with self._RateLimiterMixin_rate_limiter:
             return await super()._request(*args, **kwargs)
 
+    @override
     def close(self) -> None:
         super().close()
 
@@ -372,6 +375,7 @@ class PerHostnameRateLimitedSession(RetrySession):
             for hostname, limit, period, jitter in host_rate_limits
         }
 
+    @override
     async def _request(
         self,
         method: str,
@@ -393,6 +397,7 @@ class PerHostnameRateLimitedSession(RetrySession):
         async with self.__rate_limiters[hostname]:
             return await super()._request(method, url, *args, **kwargs)
 
+    @override
     def close(self) -> None:
         super().close()
 
