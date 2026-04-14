@@ -5,15 +5,16 @@ import itertools
 from typing import NotRequired, override, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.asyncio import RateLimiter
-from bookmarkmgr.cronet import Error as CronetError
-from bookmarkmgr.cronet import RateLimitedSession
 from bookmarkmgr.logging import get_logger
+from bookmarkmgr.playwright import RateLimitedSession, RequestError
 from bookmarkmgr.types import Failure, Result, Success
 
 from . import ClientSessionContextManagerMixin
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from playwright.async_api import Browser
 
 logger = get_logger("bookmarkmgr/AT")
 
@@ -53,8 +54,9 @@ class _RequestParams(TypedDict):
 
 
 class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
-    def __init__(self) -> None:
+    def __init__(self, browser: Browser) -> None:
         self._session = RateLimitedSession(
+            browser,
             rate_limiter=RateLimiter(
                 limit=6,
             ),
@@ -136,7 +138,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
         try:
             async with asyncio.timeout(3600):
                 return await self._archive_page(url)
-        except CronetError as error:
+        except RequestError as error:
             raise ArchiveTodayError(error) from error
         except TimeoutError as error:
             message = "Operation timed out"
