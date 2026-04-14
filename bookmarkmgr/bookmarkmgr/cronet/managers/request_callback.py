@@ -1,6 +1,6 @@
 import contextlib
 from http import HTTPStatus
-from typing import Any, cast, Self
+from typing import Any, cast, Self, TYPE_CHECKING
 
 from bookmarkmgr.asyncio import ThreadSafeEvent
 from bookmarkmgr.cronet._cronet import ffi, lib
@@ -11,23 +11,25 @@ from bookmarkmgr.cronet.errors import (
     RequestError,
 )
 from bookmarkmgr.cronet.models import RequestParameters, Response
-from bookmarkmgr.cronet.types import (
-    Buffer,
-    Result,
-    String,
-    UrlRequest,
-    UrlRequestCallback,
-    UrlResponseInfo,
-)
-from bookmarkmgr.cronet.types import (
-    Error as Error_,
-)
+
+if TYPE_CHECKING:
+    from bookmarkmgr.cronet.types import (
+        Buffer,
+        Result,
+        String,
+        UrlRequest,
+        UrlRequestCallback,
+        UrlResponseInfo,
+    )
+    from bookmarkmgr.cronet.types import (
+        Error as Error_,
+    )
 
 
 def _cancel_request_on_error(
     result: Result,
     request: UrlRequest,
-    manager: "RequestCallbackManager",
+    manager: RequestCallbackManager,
 ) -> bool:
     try:
         _raise_for_error_result(result)
@@ -41,7 +43,7 @@ def _cancel_request_on_error(
     return False
 
 
-def _get_manager(callback: UrlRequestCallback) -> "RequestCallbackManager":
+def _get_manager(callback: UrlRequestCallback) -> RequestCallbackManager:
     return cast(
         "RequestCallbackManager",
         ffi.from_handle(
@@ -51,7 +53,7 @@ def _get_manager(callback: UrlRequestCallback) -> "RequestCallbackManager":
 
 
 def _process_response(
-    manager: "RequestCallbackManager",
+    manager: RequestCallbackManager,
     response_info: UrlResponseInfo,
 ) -> Response:
     previous_response = manager._response  # noqa: SLF001

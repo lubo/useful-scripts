@@ -1,4 +1,7 @@
-from bookmarkmgr.clients.raindrop import RaindropClient
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bookmarkmgr.clients.raindrop import RaindropClient
 
 
 async def export_collection(

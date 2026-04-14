@@ -2,14 +2,16 @@ from enum import IntEnum, unique
 from http import HTTPStatus
 import itertools
 import re
-from typing import Any, cast, Protocol
+from typing import Any, cast, Protocol, TYPE_CHECKING
 from urllib.parse import ParseResult, quote, urlparse
 
 import tld
 from tld import get_tld
 
-from bookmarkmgr import scraper
 from bookmarkmgr.cronet import RequestError
+
+if TYPE_CHECKING:
+    from bookmarkmgr import scraper
 
 REDIRECT_STATUS_CODES = {
     HTTPStatus.MOVED_PERMANENTLY.value,

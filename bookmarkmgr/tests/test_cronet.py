@@ -1,10 +1,13 @@
-from collections.abc import AsyncIterator
 from http.cookiejar import Cookie
+from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
 
 from bookmarkmgr.cronet import Session
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @pytest_asyncio.fixture(scope="session")

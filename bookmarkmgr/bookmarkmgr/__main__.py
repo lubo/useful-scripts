@@ -2,11 +2,11 @@
 
 import argparse
 import asyncio
-from collections.abc import Callable
 import contextlib
 from getpass import getpass
 import logging
 import sys
+from typing import TYPE_CHECKING
 
 from . import DEBUG
 from .clients.raindrop import RaindropClient
@@ -15,6 +15,9 @@ from .commands.maintain_collection import (
     maintain_collection,
     MaintainCollectionOptions,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _HOST_RATE_LIMIT_METAVAR = ("hostname", "limit", "period", "jitter")
 _HOST_RATE_LIMIT_NARGS = len(_HOST_RATE_LIMIT_METAVAR)

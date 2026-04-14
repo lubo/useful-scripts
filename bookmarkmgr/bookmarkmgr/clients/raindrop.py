@@ -1,11 +1,13 @@
 import asyncio
-from collections.abc import AsyncIterator, Awaitable
 import math
-from typing import Any, cast, TypedDict
+from typing import Any, cast, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
 
 from . import ClientSessionContextManagerMixin
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Awaitable
 
 RAINDROPS_PER_PAGE = 50
 

@@ -1,13 +1,15 @@
 import asyncio
 from asyncio import AbstractEventLoop, Event, Lock, Semaphore, Task, TaskGroup
-from collections.abc import Callable
 import random
 import time
-from typing import Any, cast, override
+from typing import Any, cast, override, TYPE_CHECKING
 
 from overrides import override as runtime_override
 
 from .logging import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = get_logger()
 

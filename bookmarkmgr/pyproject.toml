@@ -22,7 +22,7 @@ explicit_package_bases = true
 extra_checks = true
 no_implicit_reexport = true
 python_executable = "${VIRTUAL_ENV}/bin/python"
-python_version = "3.12"
+python_version = "3.14"
 strict_equality = true
 warn_redundant_casts = true
 warn_return_any = true
@@ -49,7 +49,7 @@ cffi = "^2.0.0"
 # >1.13.0 adds garbage characters.
 enlighten = "1.13.0"
 overrides = "^7.7.0"
-python = "^3.12"
+python = "^3.14"
 tld = "^0.13"
 yarl = "^1.23.0"
 
@@ -67,7 +67,7 @@ bookmarkmgr = "bookmarkmgr.__main__:main"
 
 [tool.ruff]
 line-length = 79
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["ALL"]

@@ -6,9 +6,10 @@ from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Awaitable
 
+    from bookmarkmgr.cronet.types import Executor, Runnable
+
 from bookmarkmgr.cronet._cronet import ffi, lib
 from bookmarkmgr.cronet.errors import NotContextManagerError
-from bookmarkmgr.cronet.types import Executor, Runnable
 
 
 @ffi.def_extern()

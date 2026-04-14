@@ -1,7 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from ._cronet import lib
-from .types import Result
+
+if TYPE_CHECKING:
+    from .types import Result
 
 
 class Error(Exception):

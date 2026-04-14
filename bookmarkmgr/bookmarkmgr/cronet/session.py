@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Awaitable, Callable, Iterable, Mapping
 from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
@@ -25,6 +24,7 @@ from .models import RequestParameters, Response
 from .utils import adestroying, destroying
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable, Iterable, Mapping
     from http.client import HTTPResponse
 
     from .types import Engine

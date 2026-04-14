@@ -2,10 +2,12 @@ from asyncio import Event
 from datetime import datetime
 from ipaddress import ip_address
 import re
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlencode, urlparse
 
-from bookmarkmgr import scraper
-from bookmarkmgr.clients.raindrop import RaindropOut
+if TYPE_CHECKING:
+    from bookmarkmgr import scraper
+    from bookmarkmgr.clients.raindrop import RaindropOut
 
 
 class _Link:
@@ -13,7 +15,7 @@ class _Link:
         self.created = datetime.fromisoformat(raindrop["created"])
         self.id = raindrop["_id"]
 
-    def __lt__(self, other: "_Link") -> bool:
+    def __lt__(self, other: _Link) -> bool:
         return self.created < other.created or (
             self.created == other.created and self.id < other.id
         )

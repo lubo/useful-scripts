@@ -1,11 +1,10 @@
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable
 import contextlib
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import enlighten
 
@@ -41,6 +40,9 @@ from bookmarkmgr.utils.link_metadata import (
     metadata_from_note,
     metadata_to_note,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
 logger = get_logger()
 

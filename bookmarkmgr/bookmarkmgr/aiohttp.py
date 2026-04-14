@@ -1,7 +1,6 @@
 import asyncio
 from http import HTTPStatus
-from types import SimpleNamespace
-from typing import Any, override
+from typing import Any, override, TYPE_CHECKING
 
 from aiohttp import (
     ClientConnectionError,
@@ -17,6 +16,9 @@ from aiohttp_retry import ExponentialRetry, RetryClient
 
 from .asyncio import RateLimiterMixin
 from .logging import get_logger
+
+if TYPE_CHECKING:
+    from types import SimpleNamespace
 
 logger = get_logger()
 
