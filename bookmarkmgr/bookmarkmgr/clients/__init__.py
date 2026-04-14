@@ -1,14 +1,16 @@
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Protocol, Self, TypeVar
-
-_ST = TypeVar("_ST", bound=AbstractAsyncContextManager[Any])
+from typing import Any, Protocol, Self
 
 
-class _HasSession(Protocol[_ST]):
-    _session: _ST
+class _HasSession[ST](Protocol):
+    _session: ST
 
 
-class ClientSessionContextManagerMixin(_HasSession[_ST]):
+class ClientSessionContextManagerMixin[
+    ST: AbstractAsyncContextManager[Any],
+](
+    _HasSession[ST],
+):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
