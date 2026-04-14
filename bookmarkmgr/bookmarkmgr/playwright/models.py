@@ -3,7 +3,6 @@ from http import HTTPStatus
 from http.client import HTTPMessage
 import json
 from typing import Any
-from urllib.request import Request
 
 
 @dataclass(slots=True)
@@ -17,12 +16,6 @@ class ResponseStatus:
             <= self.status_code
             < HTTPStatus.BAD_REQUEST.value
         )
-
-
-class RequestParameters(Request):
-    @property
-    def url(self) -> str:
-        return self.full_url
 
 
 @dataclass(slots=True)
