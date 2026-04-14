@@ -99,7 +99,7 @@ class RaindropClient(
                     1,
                     math.ceil(page["count"] / RAINDROPS_PER_PAGE),
                 ):
-                    task_group.create_task(
+                    _ = task_group.create_task(
                         self._load_collection_page_items(
                             queue,
                             collection_id,

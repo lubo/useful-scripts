@@ -397,7 +397,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
             or datetime.now(tz=UTC) > last_check + timedelta(days=1)
         )
     ):
-        task_group.create_task(
+        _ = task_group.create_task(
             process_scrape_and_check_result(
                 scrape_and_check(check_session, link),
                 raindrop,
@@ -416,7 +416,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
 
         duplicate_checker.add_link(canonical_url_raindrop)
 
-        task_group.create_task(
+        _ = task_group.create_task(
             process_check_duplicate_result(
                 duplicate_checker.is_link_duplicate(
                     canonical_url_raindrop,

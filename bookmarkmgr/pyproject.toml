@@ -18,6 +18,7 @@ enable_error_code = [
     "truthy-bool",
     "truthy-iterable",
     "unimported-reveal",
+    "unused-awaitable",
 ]
 explicit_package_bases = true
 extra_checks = true
