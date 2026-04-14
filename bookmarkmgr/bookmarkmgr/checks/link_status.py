@@ -8,7 +8,7 @@ import tld
 from tld import get_tld
 from yarl import URL
 
-from bookmarkmgr.cronet import RequestError
+from bookmarkmgr.playwright import RequestError
 
 if TYPE_CHECKING:
     from bookmarkmgr import scraper

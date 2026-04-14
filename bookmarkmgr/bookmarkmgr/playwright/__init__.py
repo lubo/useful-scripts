@@ -1,4 +1,5 @@
-from .errors import Error, RequestError
+from .browser import BrowserManager
+from .errors import RequestError
 from .models import Response, ResponseStatus
 from .session import (
     PerHostnameRateLimitedSession,
@@ -8,7 +9,7 @@ from .session import (
 )
 
 __all__ = (
-    "Error",
+    "BrowserManager",
     "PerHostnameRateLimitedSession",
     "RateLimitedSession",
     "RequestError",

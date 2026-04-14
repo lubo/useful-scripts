@@ -6,8 +6,8 @@ from typing import override
 
 from yarl import URL
 
-from bookmarkmgr import asyncio, cronet
-from bookmarkmgr.cronet import RequestError, ResponseStatus, RetrySession
+from bookmarkmgr import asyncio, playwright
+from bookmarkmgr.playwright import RequestError, ResponseStatus, RetrySession
 
 INVALID_HTML_PARENTS = {
     "base",
@@ -156,7 +156,7 @@ async def scrape_page(
 
     page = None
 
-    async def retry_predicate(response: cronet.Response) -> bool:
+    async def retry_predicate(response: playwright.Response) -> bool:
         nonlocal page
 
         page = None
