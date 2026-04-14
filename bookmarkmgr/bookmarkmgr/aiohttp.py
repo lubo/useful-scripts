@@ -163,7 +163,4 @@ class RateLimitedRetryClientSession(RetryClientSession):
         )
 
     async def response_callback(self, response: ClientResponse) -> bool:
-        return (
-            response is not None
-            and response.status not in RATE_LIMIT_STATUS_CODES
-        )
+        return response.status not in RATE_LIMIT_STATUS_CODES
