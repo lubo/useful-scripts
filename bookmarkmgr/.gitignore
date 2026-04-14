@@ -1,4 +1,2 @@
-*.o
-*.so
-/bookmarkmgr/cronet/_cronet.c
+/poetry.toml
 __pycache__

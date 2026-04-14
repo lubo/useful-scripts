@@ -86,8 +86,6 @@ jobs:
           python-version-file: ${{ matrix.component }}/pyproject.toml
       - run: sudo apt-get update
       - run: sudo apt-get install -y --no-install-recommends python3-poetry
-      - name: Don't build native modules
-        run: echo > build.py
       # Without --no-root, installing the current project fails with:
       #
       #   Wheel for pip for Python 3.14 is unavailable. apt install python3-pip-whl

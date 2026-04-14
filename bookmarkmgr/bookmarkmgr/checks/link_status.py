@@ -8,7 +8,7 @@ from urllib.parse import quote, SplitResult, urlsplit
 import tld
 from tld import get_tld
 
-from bookmarkmgr.cronet import RequestError
+from bookmarkmgr.playwright import RequestError
 
 if TYPE_CHECKING:
     from bookmarkmgr import scraper

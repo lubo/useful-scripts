@@ -3,8 +3,8 @@ import gc
 from html.parser import HTMLParser
 from http import HTTPStatus
 
-from bookmarkmgr import asyncio, cronet
-from bookmarkmgr.cronet import RequestError, ResponseStatus, Session
+from bookmarkmgr import asyncio, playwright
+from bookmarkmgr.playwright import RequestError, ResponseStatus, RetrySession
 
 INVALID_HTML_PARENTS = {
     "base",
@@ -116,12 +116,12 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
 
 
 async def scrape_page(
-    session: Session,
+    session: RetrySession,
     url: str,
 ) -> Result:
     page = None
 
-    async def retry_predicate(response: cronet.Response) -> bool:
+    async def retry_predicate(response: playwright.Response) -> bool:
         if response.status_code != HTTPStatus.OK.value:
             return False
 

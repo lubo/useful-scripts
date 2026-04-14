@@ -7,8 +7,9 @@ from functools import partial
 from typing import Any, TYPE_CHECKING
 
 import enlighten
+from playwright.async_api import async_playwright
 
-from bookmarkmgr import cronet, scraper
+from bookmarkmgr import playwright, scraper
 from bookmarkmgr.asyncio import ForgivingTaskGroup
 from bookmarkmgr.checks.duplicate_link import (
     DuplicateLinkChecker,
@@ -33,8 +34,11 @@ from bookmarkmgr.clients.wayback_machine import (
     WaybackMachineError,
 )
 from bookmarkmgr.collections import TypedDefaultsDict
-from bookmarkmgr.cronet import PerHostnameRateLimitedSession
 from bookmarkmgr.logging import get_logger
+from bookmarkmgr.playwright import (
+    BrowserManager,
+    PerHostnameRateLimitedSession,
+)
 from bookmarkmgr.types import Failure, Result, Success
 from bookmarkmgr.utils.link_metadata import (
     Metadata,
@@ -235,13 +239,13 @@ def add_or_remove_tag(
 
 
 async def scrape_and_check(
-    session: cronet.Session,
+    session: playwright.RetrySession,
     url: str,
 ) -> tuple[scraper.Page | None, LinkStatus, str | None, str | None]:
     scraper_result = await scraper.scrape_page(session, url)
     link_status, error = check_link_status(scraper_result)
 
-    if isinstance(scraper_result, cronet.RequestError):
+    if isinstance(scraper_result, playwright.RequestError):
         return None, link_status, error, None
 
     if (fixed_url := get_fixed_url(scraper_result.response, url)) is None:
@@ -360,7 +364,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     note_metadata: Metadata,
     at_client: ArchiveTodayClient,
     wm_client: WaybackMachineClient,
-    check_session: cronet.Session,
+    check_session: playwright.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
     user_options: MaintainCollectionOptions,
 ) -> None:
@@ -432,7 +436,7 @@ async def maintain_raindrop(  # noqa: PLR0913
     raindrop: RaindropOut,
     at_client: ArchiveTodayClient,
     wm_client: WaybackMachineClient,
-    check_session: cronet.Session,
+    check_session: playwright.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
     user_options: MaintainCollectionOptions,
 ) -> None:
@@ -495,9 +499,12 @@ async def maintain_collection(
             progress_bar_manager,
             "Maintaining",
         ) as maintaining_progress_bar,
-        ArchiveTodayClient() as at_client,
+        async_playwright() as playwright,
+        BrowserManager(playwright) as browser_manager,
+        ArchiveTodayClient(browser_manager.get_browser()) as at_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
+            browser_manager.get_browser(),
             host_rate_limits=user_options.host_rate_limits,
         ) as check_session,
         ForgivingTaskGroup() as task_group,

@@ -3,7 +3,6 @@ from email.message import Message
 from http import HTTPStatus
 import json
 from typing import Any
-from urllib.request import Request
 
 
 @dataclass(slots=True)
@@ -17,22 +16,6 @@ class ResponseStatus:
             <= self.status_code
             < HTTPStatus.BAD_REQUEST.value
         )
-
-
-class RequestParameters(Request):
-    def __init__(
-        self,
-        *args: Any,
-        allow_redirects: bool = True,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.allow_redirects = allow_redirects
-
-    @property
-    def url(self) -> str:
-        return self.full_url
 
 
 @dataclass(slots=True)
