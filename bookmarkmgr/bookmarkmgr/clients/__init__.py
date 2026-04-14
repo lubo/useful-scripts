@@ -11,9 +11,6 @@ class ClientSessionContextManagerMixin[
 ](
     _HasSession[ST],
 ):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-
     async def __aenter__(self) -> Self:
         await self._session.__aenter__()
 
