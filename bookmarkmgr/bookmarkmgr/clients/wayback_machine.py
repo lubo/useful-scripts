@@ -8,6 +8,7 @@ from aiohttp import ClientError, ClientResponseError
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
 from bookmarkmgr.logging import get_logger
+from bookmarkmgr.types import Failure, Result, Success
 
 from . import ClientSessionContextManagerMixin
 
@@ -49,7 +50,7 @@ class WaybackMachineClient(
     async def _archive_page(  # noqa: C901, PLR0912
         self,
         url: str,
-    ) -> tuple[str | None, str | None]:
+    ) -> Result[str, str]:
         request_paramaters = {
             "url": url,
         }
@@ -71,7 +72,7 @@ class WaybackMachineClient(
                     logger.warning("Unexpected scheme: %s", url)
                 archival_url = parsed_url._replace(scheme="https").geturl()
 
-            return archival_url, None
+            return Success(archival_url)
 
         logger.debug("Requesting archival of %s", url)
 
@@ -114,12 +115,13 @@ class WaybackMachineClient(
 
                 logger.info("Archived %s", url)
 
-                return archival_url, None
+                return Success(archival_url)
 
         job_id = job_id_match.group()
 
         logger.debug("Archiving in progress for %s", url)
 
+        data = {}
         delay_factor = 1
 
         # https://github.com/internetarchive/wayback-machine-webextension/blob/edebc9aa49c138fd784f94a1f70e47e0eb583dd9/webextension/scripts/background.js#L147
@@ -152,19 +154,19 @@ class WaybackMachineClient(
                     break
                 case _:
                     if data.get("status_ext") in _IGNORED_ERRORS:
-                        return None, data["message"]
+                        return Failure(data["message"])
 
                     message = f"Unexpected status response for {url}: {data}"
                     raise WaybackMachineError(message)
 
         logger.info("Archived %s", url)
 
-        return (
+        return Success(
             f"https://web.archive.org/web/{data['timestamp']}/"
-            f"{data['original_url']}"
-        ), None
+            f"{data['original_url']}",
+        )
 
-    async def archive_page(self, url: str) -> tuple[str | None, str | None]:
+    async def archive_page(self, url: str) -> Result[str, str]:
         try:
             async with asyncio.timeout(1800):
                 return await self._archive_page(url)

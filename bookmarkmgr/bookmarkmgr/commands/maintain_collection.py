@@ -35,6 +35,7 @@ from bookmarkmgr.clients.wayback_machine import (
 from bookmarkmgr.collections import TypedDefaultsDict
 from bookmarkmgr.cronet import PerHostnameRateLimitedSession
 from bookmarkmgr.logging import get_logger
+from bookmarkmgr.types import Failure, Result, Success
 from bookmarkmgr.utils.link_metadata import (
     Metadata,
     metadata_from_note,
@@ -98,35 +99,44 @@ async def get_progress_bar(
 
 
 async def process_archival_result(
-    result_awaitable: Awaitable[tuple[str | None, str | None]],
+    result_awaitable: Awaitable[Result[str, str]],
     raindrop: RaindropIn,
     metadata: Metadata,
     service_initials: str,
     service_name: str,
 ) -> None:
-    error: Exception | str | None
+    result: Result[str, str] | ArchiveTodayError | WaybackMachineError
 
     try:
-        archival_url, error = await result_awaitable
+        result = await result_awaitable
     except (ArchiveTodayError, WaybackMachineError) as e:
-        error = e
+        result = e
 
-    if error is None:
-        metadata[f"Archive ({service_initials})"] = f"[link]({archival_url})"
-        tag = "archived"
-    else:
-        logger.error(
-            "Archival in %s failed: %s: %s",
-            service_name,
-            error,
-            raindrop["link"],
-        )
+    match result:
+        case Success(archival_url):
+            metadata[f"Archive ({service_initials})"] = (
+                f"[link]({archival_url})"
+            )
+            tag = "archived"
+        case _:
+            match result:
+                case Failure(message):
+                    error = message
+                case _:
+                    error = result
 
-        if isinstance(error, Exception):
-            return
+            logger.error(
+                "Archival in %s failed: %s: %s",
+                service_name,
+                error,
+                raindrop["link"],
+            )
 
-        metadata[f"Archival Error ({service_initials})"] = error
-        tag = "archival-failed"
+            if isinstance(error, Exception):
+                return
+
+            metadata[f"Archival Error ({service_initials})"] = error
+            tag = "archival-failed"
 
     if tag in raindrop["tags"]:
         return

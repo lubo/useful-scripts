@@ -6,6 +6,7 @@ import itertools
 from bookmarkmgr.cronet import Error as CronetError
 from bookmarkmgr.cronet import RateLimitedSession
 from bookmarkmgr.logging import get_logger
+from bookmarkmgr.types import Failure, Result, Success
 
 from . import ClientSessionContextManagerMixin
 
@@ -38,7 +39,8 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
             rate_limit=6,
         )
 
-    async def _archive_page(self, url: str) -> tuple[str | None, str | None]:
+    async def _archive_page(self, url: str) -> Result[str, str]:
+        archival_url = None
         request_params = {
             "url": "https://archive.ph/submit/",
             "params": {
@@ -62,7 +64,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
                         refresh_header = response.headers.get("Refresh")
 
                         if refresh_header is None:
-                            return None, _extract_text(response.text)
+                            return Failure(_extract_text(response.text))
 
                         refresh_parts = refresh_header.split("=", 1)
 
@@ -74,6 +76,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
 
                             logger.debug("Successfully submitted %s", url)
                 case HTTPStatus.FOUND.value:
+                    archival_url = response.redirect_url
                     break
                 case _:
                     message = (
@@ -100,11 +103,15 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
             else:
                 delay_factor = 1
 
+        if archival_url is None:
+            message = f"Failed to obtain archival URL for {url}"
+            raise ArchiveTodayError(message)
+
         logger.info("Archived %s", url)
 
-        return (response.redirect_url, None)
+        return Success(archival_url)
 
-    async def archive_page(self, url: str) -> tuple[str | None, str | None]:
+    async def archive_page(self, url: str) -> Result[str, str]:
         try:
             async with asyncio.timeout(1800):
                 return await self._archive_page(url)
