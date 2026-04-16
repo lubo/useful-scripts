@@ -127,6 +127,10 @@ def _fix_url_subdomain(
         url.hostname is None
         or redirect_url.hostname is None
         or url.hostname == redirect_url.hostname
+        or url.port != redirect_url.port
+        or url.username != redirect_url.username
+        or url.password != redirect_url.password
+        or url != redirect_url._replace(netloc=url.netloc)
     ):
         return url
 
