@@ -3,7 +3,7 @@ from datetime import datetime
 from ipaddress import ip_address
 import re
 from typing import TYPE_CHECKING
-from urllib.parse import parse_qsl, urlencode, urlparse
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 if TYPE_CHECKING:
     from bookmarkmgr import scraper
@@ -31,7 +31,7 @@ def _is_ip_address(string: str) -> bool:
 
 
 def _remove_query_from_url(url: str) -> str:
-    parsed_url = urlparse(url)
+    parsed_url = urlsplit(url)
 
     if parsed_url.query == "":
         return url
@@ -113,8 +113,8 @@ def get_canonical_url(page: scraper.Page, url: str) -> str | None:
     if not canonical_url:
         return None
 
-    parsed_canonical_url = urlparse(canonical_url)
-    parsed_url = urlparse(url)
+    parsed_canonical_url = urlsplit(canonical_url)
+    parsed_url = urlsplit(url)
 
     canonical_url_qp = parse_qsl(parsed_canonical_url.query)
     url_qp = parse_qsl(parsed_url.query)

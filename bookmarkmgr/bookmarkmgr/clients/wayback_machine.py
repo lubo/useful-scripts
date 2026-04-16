@@ -2,7 +2,7 @@ import asyncio
 from http import HTTPStatus
 import itertools
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 from aiohttp import ClientError, ClientResponseError
 
@@ -67,7 +67,7 @@ class WaybackMachineClient(
             archival_url = closest["url"]
 
             if not archival_url.startswith("https://"):
-                parsed_url = urlparse(archival_url)
+                parsed_url = urlsplit(archival_url)
                 if parsed_url.scheme != "http":
                     logger.warning("Unexpected scheme: %s", url)
                 archival_url = parsed_url._replace(scheme="https").geturl()

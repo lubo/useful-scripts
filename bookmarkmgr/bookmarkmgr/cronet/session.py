@@ -3,7 +3,7 @@ from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
 from typing import Any, cast, override, Self, TYPE_CHECKING
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 from yarl import URL
 
@@ -383,7 +383,7 @@ class PerHostnameRateLimitedSession(RetrySession):
         *args: Any,
         **kwargs: Any,
     ) -> Response:
-        parsed_url = urlparse(url)
+        parsed_url = urlsplit(url)
 
         if parsed_url.hostname is None:
             message = "Missing hostname in the URL"
