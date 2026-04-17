@@ -37,10 +37,20 @@ RATE_LIMIT_STATUS_CODES = {
 }
 
 TRANSIENT_ERROR_STATUS_CODES = {
+    HTTPStatus.FORBIDDEN.value,  # May be used for rate limiting.
     HTTPStatus.INTERNAL_SERVER_ERROR.value,
     HTTPStatus.BAD_GATEWAY.value,
     HTTPStatus.SERVICE_UNAVAILABLE.value,
     HTTPStatus.GATEWAY_TIMEOUT.value,
+    # Cloudflare
+    520,
+    521,
+    522,
+    523,
+    524,
+    525,
+    526,
+    530,
 }
 
 RETRYABLE_STATUS_CODES = {
