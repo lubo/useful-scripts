@@ -24,36 +24,38 @@ main() {
 	if [[ ! "${WITH_SSH_AGENT}" ]]; then
 		export WITH_SSH_AGENT=1
 
-		# User namespace isn't used to preserve ownerships.
-		exec sudo \
-			--preserve-env \
-			-- \
-			unshare \
-			--mount \
-			--propagation private \
+		# By default, Bubblewrap remaps all users except the current one to
+		# 65534. When files in /etc/ssh are not owned by root and the current
+		# user or their permissions are not 0644, SSH fails with "Bad owner
+		# or permissions on /etc/ssh/…". See:
+		# https://github.com/openssh/openssh-portable/blob/eb34f95206c3556e10046f091ea95431c4be84f8/readconf.c#L2640-L2642
+		# On Arch Linux, /etc/ssh/ssh_config.d contains a symlink and symlinks
+		# on Linux always have 0777 permissions. The only way to satisfy this
+		# condition when unprivileged is to work under user 65534.
+		exec bwrap \
+			--die-with-parent \
+			--dev-bind / / \
+			--unshare-user \
+			--uid 65534 \
+			--gid 65534 \
+			--perms 0700 \
+			--tmpfs ~/.ssh/agent \
 			-- \
 			"$0" "$@"
 	fi
 
 	if [[ ! "${SSH_AGENT_PID}" ]]; then
-		GID=$(id -g "${SUDO_UID}")
-
-		mount \
-			--options "mode=0700,uid=${SUDO_UID},gid=${GID}" \
-			--types tmpfs \
-			tmpfs \
-			~/.ssh/agent
-
-		exec sudo \
-			--preserve-env \
-			--user "${USERNAME}" \
-			-- \
-			ssh-agent \
-			-- \
-			"$0" "$@"
+		exec ssh-agent -- "$0" "$@"
 	fi
 
-	ssh-add || true
+	# Simple `ssh-add` doesn't work under remapped users for some reason.
+	# Fixing /etc/passwd and /etc/group doesn't seem to help. At least we get
+	# to prioritize ED22519 this way.
+	for key in ~/.ssh/id_{{ed25519,ecdsa}{,_sk},rsa}; do
+		if [[ -f "${key}" ]]; then
+			ssh-add "${key}" || true
+		fi
+	done
 
 	if [[ "$#" -gt 0 ]]; then
 		exec "$@"
