@@ -3,7 +3,7 @@
 # Wraps a program in ssh-agent and adds keys into the agent. If no program is
 # provided, then it spawns an interactive shell.
 
-set -e
+set -eo pipefail
 
 # shellcheck disable=SC2016
 EXPECT_SCRIPT='
@@ -20,24 +20,43 @@ stty echo < $spawn_out(slave,name)
 interact
 '
 
+# By default, Bubblewrap remaps all users except the current one to 65534. When
+# files in /etc/ssh are not owned by root and the current user or their
+# permissions are not 0644, SSH fails with:
+#
+#   Bad owner or permissions on /etc/ssh/…
+#
+# See:
+# https://github.com/openssh/openssh-portable/blob/eb34f95206c3556e10046f091ea95431c4be84f8/readconf.c#L2640-L2642
+# On Arch Linux, /etc/ssh/ssh_config.d contains a symlink and symlinks on Linux
+# always have 0777 permissions. The only way to satisfy this condition when
+# unprivileged is to work under user 65534.
+SANDBOX_GID=65534
+SANDBOX_UID=65534
+
 main() {
 	if [[ ! "${WITH_SSH_AGENT}" ]]; then
 		export WITH_SSH_AGENT=1
 
-		# By default, Bubblewrap remaps all users except the current one to
-		# 65534. When files in /etc/ssh are not owned by root and the current
-		# user or their permissions are not 0644, SSH fails with "Bad owner
-		# or permissions on /etc/ssh/…". See:
-		# https://github.com/openssh/openssh-portable/blob/eb34f95206c3556e10046f091ea95431c4be84f8/readconf.c#L2640-L2642
-		# On Arch Linux, /etc/ssh/ssh_config.d contains a symlink and symlinks
-		# on Linux always have 0777 permissions. The only way to satisfy this
-		# condition when unprivileged is to work under user 65534.
+		APP_DIR=${XDG_RUNTIME_DIR:?}/with-ssh-agent
+		mkdir -p "${APP_DIR}"
+
+		# Running ssh-agent without arguments requires the home directory in
+		# /etc/passwd to be set correctly to work properly. See:
+		# https://github.com/openssh/openssh-portable/blob/eb34f95206c3556e10046f091ea95431c4be84f8/ssh-add.c#L1027
+		getent group "${SANDBOX_GID}" >"${APP_DIR}/group"
+		getent passwd "${SANDBOX_UID}" |
+			awk -F : -v OFS=: -v "home=${HOME:?}" '{$6=home}1' \
+				>"${APP_DIR}/passwd"
+
 		exec bwrap \
 			--die-with-parent \
 			--dev-bind / / \
+			--bind {"${APP_DIR}",/etc}/group \
+			--bind {"${APP_DIR}",/etc}/passwd \
 			--unshare-user \
-			--uid 65534 \
-			--gid 65534 \
+			--uid "${SANDBOX_UID}" \
+			--gid "${SANDBOX_GID}" \
 			--perms 0700 \
 			--tmpfs ~/.ssh/agent \
 			-- \
@@ -48,14 +67,7 @@ main() {
 		exec ssh-agent -- "$0" "$@"
 	fi
 
-	# Simple `ssh-add` doesn't work under remapped users for some reason.
-	# Fixing /etc/passwd and /etc/group doesn't seem to help. At least we get
-	# to prioritize ED22519 this way.
-	for key in ~/.ssh/id_{{ed25519,ecdsa}{,_sk},rsa}; do
-		if [[ -f "${key}" ]]; then
-			ssh-add "${key}" || true
-		fi
-	done
+	ssh-add || true
 
 	if [[ "$#" -gt 0 ]]; then
 		exec "$@"
