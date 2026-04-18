@@ -72,7 +72,10 @@ def check_link_status(
                 message = "Page is None"
                 raise ValueError(message)
 
-            if scraper_result.page.title == "Video deleted":
+            if scraper_result.page.title in [
+                "Page Not Found",
+                "Video deleted",
+            ]:
                 link_status = LinkStatus.BROKEN
                 error = scraper_result.page.title
             elif (
