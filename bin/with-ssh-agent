@@ -44,9 +44,21 @@ main() {
 		# Running ssh-agent without arguments requires the home directory in
 		# /etc/passwd to be set correctly to work properly. See:
 		# https://github.com/openssh/openssh-portable/blob/eb34f95206c3556e10046f091ea95431c4be84f8/ssh-add.c#L1027
-		getent group "${SANDBOX_GID}" >"${APP_DIR}/group"
-		getent passwd "${SANDBOX_UID}" |
-			awk -F : -v OFS=: -v "home=${HOME:?}" '{$6=home}1' \
+		GID=$(id -g)
+		getent group "${GID}" |
+			awk \
+				-F : \
+				-v OFS=: \
+				-v "gid=${SANDBOX_GID}" \
+				'{$3=gid}1' \
+				>"${APP_DIR}/group"
+		getent passwd "${UID}" |
+			awk \
+				-F : \
+				-v OFS=: \
+				-v "gid=${SANDBOX_GID}" \
+				-v "uid=${SANDBOX_UID}" \
+				'{$3=uid; $4=gid}1' \
 				>"${APP_DIR}/passwd"
 
 		exec bwrap \
