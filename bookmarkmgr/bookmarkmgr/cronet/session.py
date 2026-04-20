@@ -146,11 +146,20 @@ class Session:
         self,
         method: str,
         url: str,
+        *,
         params: Mapping[str, str] | None = None,
-        **kwargs: Any,
+        allow_redirects: bool = True,
     ) -> Response:
         if self._engine is None:
             raise NotContextManagerError
+
+        # This option is preserved to preserve backwards compatibility.
+        # However, support for redirects is currently not necessary and
+        # removing it means that we don't have to deal with redirect
+        # security issues like cookie handling and protocol downgrades.
+        if allow_redirects:
+            message = "Redirects are unsupported"
+            raise ValueError(message)
 
         if params is not None:
             url = str(URL(url).update_query(params))
@@ -158,7 +167,6 @@ class Session:
         request_params = RequestParameters(
             method=method,
             url=url,
-            **kwargs,
         )
         self.cookie_jar.add_cookie_header(request_params)
 
@@ -182,11 +190,7 @@ class Session:
             )
             for name, value in chain(
                 DEFAULT_HEADERS,
-                # We currently don't have a way to change headers for
-                # redirected requests.
-                []
-                if request_params.allow_redirects
-                else request_params.unredirected_hdrs.items(),
+                request_params.unredirected_hdrs.items(),
                 request_params.headers.items(),
             ):
                 with destroying(

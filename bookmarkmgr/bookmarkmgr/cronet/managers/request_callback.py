@@ -111,15 +111,7 @@ def _on_request_redirect_received(
     response = _process_response(manager, response_info)
     response.redirect_url = ffi.string(new_location_url).decode()
 
-    if not manager.request_parameters.allow_redirects:
-        lib.Cronet_UrlRequest_Cancel(request)
-        return
-
-    _cancel_request_on_error(
-        lib.Cronet_UrlRequest_FollowRedirect(request),
-        request,
-        manager,
-    )
+    lib.Cronet_UrlRequest_Cancel(request)
 
 
 @ffi.def_extern()
