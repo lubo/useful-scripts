@@ -105,6 +105,8 @@ def check_link_status(
         scraper_result.response.status_code,
         scraper_result.response.reason,
     )
+    if scraper_result.response.redirect_url is not None:
+        error += f" → {scraper_result.response.redirect_url}"
 
     if link_status != LinkStatus.OK:
         return link_status, error
