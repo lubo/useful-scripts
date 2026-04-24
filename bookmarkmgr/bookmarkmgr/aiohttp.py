@@ -2,11 +2,11 @@ import asyncio
 from http import HTTPStatus
 from typing import Any, override, TYPE_CHECKING
 
+import aiohttp
 from aiohttp import (
     ClientConnectionError,
     ClientPayloadError,
     ClientResponse,
-    ClientSession,
     TCPConnector,
     TraceConfig,
     TraceRequestEndParams,
@@ -20,6 +20,8 @@ from .logging import get_logger
 if TYPE_CHECKING:
     from types import SimpleNamespace
 
+    from aiohttp.client import _RequestContextManager
+
 logger = get_logger()
 
 RATE_LIMIT_STATUS_CODES = {
@@ -30,7 +32,7 @@ RATE_LIMIT_STATUS_CODES = {
 
 
 async def on_request_end(
-    session: ClientSession,  # noqa: ARG001
+    session: aiohttp.ClientSession,  # noqa: ARG001
     context: SimpleNamespace,  # noqa: ARG001
     params: TraceRequestEndParams,
 ) -> None:
@@ -47,7 +49,7 @@ async def on_request_end(
 
 
 async def on_request_exception(
-    session: ClientSession,  # noqa: ARG001
+    session: aiohttp.ClientSession,  # noqa: ARG001
     context: SimpleNamespace,  # noqa: ARG001
     params: TraceRequestExceptionParams,
 ) -> None:
@@ -65,6 +67,49 @@ async def on_request_exception(
 trace_config = TraceConfig()
 trace_config.on_request_end.append(on_request_end)
 trace_config.on_request_exception.append(on_request_exception)
+
+
+class ClientSession(aiohttp.ClientSession):
+    """Disables redirects by default to prevent protocol downgrades, etc."""
+
+    @override
+    async def _request(
+        self,
+        *args: Any,
+        allow_redirects: bool = False,
+        **kwargs: Any,
+    ) -> ClientResponse:
+        return await super()._request(
+            *args,
+            allow_redirects=allow_redirects,
+            **kwargs,
+        )
+
+    @override
+    def get(
+        self,
+        *args: Any,
+        allow_redirects: bool = False,
+        **kwargs: Any,
+    ) -> _RequestContextManager:
+        return super().get(
+            *args,
+            allow_redirects=allow_redirects,
+            **kwargs,
+        )
+
+    @override
+    def options(
+        self,
+        *args: Any,
+        allow_redirects: bool = False,
+        **kwargs: Any,
+    ) -> _RequestContextManager:
+        return super().options(
+            *args,
+            allow_redirects=allow_redirects,
+            **kwargs,
+        )
 
 
 class RateLimitedClientSession(RateLimiterMixin, ClientSession):
