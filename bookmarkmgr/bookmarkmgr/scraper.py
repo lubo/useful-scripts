@@ -3,6 +3,8 @@ import gc
 from html.parser import HTMLParser
 from http import HTTPStatus
 
+from yarl import URL
+
 from bookmarkmgr import asyncio, cronet
 from bookmarkmgr.cronet import RequestError, ResponseStatus, Session
 
@@ -119,6 +121,17 @@ async def scrape_page(
     session: Session,
     url: str,
 ) -> Result:
+    parsed_url = URL(url)
+
+    match parsed_url.scheme:
+        case "" | "http":
+            parsed_url = parsed_url.with_scheme("https")
+        case "https":
+            pass
+        case _:
+            message = f"Unsupported URL scheme: {parsed_url.scheme}"
+            raise ValueError(message)
+
     page = None
 
     async def retry_predicate(response: cronet.Response) -> bool:
@@ -136,7 +149,7 @@ async def scrape_page(
 
     try:
         response = await session.get(
-            url,
+            parsed_url,
             allow_redirects=False,
             retry_predicate=retry_predicate,
         )

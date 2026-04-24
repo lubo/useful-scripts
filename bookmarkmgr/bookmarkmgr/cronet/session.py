@@ -3,7 +3,6 @@ from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
 from typing import Any, cast, override, Self, TYPE_CHECKING
-from urllib.parse import urlsplit
 
 from yarl import URL
 
@@ -145,7 +144,7 @@ class Session:
     async def request(
         self,
         method: str,
-        url: str,
+        url: str | URL,
         *,
         params: Mapping[str, str] | None = None,
         allow_redirects: bool = True,
@@ -161,8 +160,13 @@ class Session:
             message = "Redirects are unsupported"
             raise ValueError(message)
 
+        if isinstance(url, str):
+            url = URL(url)
+
         if params is not None:
-            url = str(URL(url).update_query(params))
+            url = url.update_query(params)
+
+        url = str(url)
 
         request_params = RequestParameters(
             method=method,
@@ -249,7 +253,7 @@ class RetrySession(Session):
     async def _request(
         self,
         method: str,
-        url: str,
+        url: str | URL,
         *args: Any,
         is_retry: bool,
         **kwargs: Any,
@@ -263,7 +267,6 @@ class RetrySession(Session):
     async def request(  # noqa: C901
         self,
         method: str,
-        url: str,
         *args: Any,
         retry_predicate: Callable[[Response], Awaitable[bool]] | None = None,
         **kwargs: Any,
@@ -282,7 +285,6 @@ class RetrySession(Session):
             try:
                 response = await self._request(
                     method,
-                    url,
                     *args,
                     is_retry=is_retry,
                     **kwargs,
@@ -393,17 +395,18 @@ class PerHostnameRateLimitedSession(RetrySession):
     async def _request(
         self,
         method: str,
-        url: str,
+        url: str | URL,
         *args: Any,
         **kwargs: Any,
     ) -> Response:
-        parsed_url = urlsplit(url)
+        if isinstance(url, str):
+            url = URL(url)
 
-        if parsed_url.hostname is None:
+        if url.host is None:
             message = "Missing hostname in the URL"
             raise ValueError(message)
 
-        hostname = parsed_url.hostname.lower()
+        hostname = url.host.lower()
 
         if hostname not in self.__rate_limiters:
             self.__rate_limiters[hostname] = RateLimiter(1, 1)
