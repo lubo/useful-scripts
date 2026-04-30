@@ -168,7 +168,7 @@ class WaybackMachineClient(
 
     async def archive_page(self, url: str) -> Result[str, str]:
         try:
-            async with asyncio.timeout(1800):
+            async with asyncio.timeout(3600):
                 return await self._archive_page(url)
         except ClientError as error:
             raise WaybackMachineError(error) from error

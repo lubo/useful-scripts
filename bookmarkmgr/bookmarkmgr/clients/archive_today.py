@@ -113,7 +113,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
 
     async def archive_page(self, url: str) -> Result[str, str]:
         try:
-            async with asyncio.timeout(1800):
+            async with asyncio.timeout(3600):
                 return await self._archive_page(url)
         except CronetError as error:
             raise ArchiveTodayError(error) from error
