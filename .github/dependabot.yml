@@ -104,6 +104,10 @@ updates:
       prefix: ytm
     cooldown:
       default-days: 2
+      exclude:
+        # I need to be able to use the version provided by Arch Linux.
+        # https://github.com/microsoft/playwright-python/issues/3036
+        - playwright
     versioning-strategy: increase
 
   - package-ecosystem: pip
@@ -127,4 +131,8 @@ updates:
     target-branch: master
     cooldown:
       default-days: 2
+      exclude:
+        # I need to be able to use the version provided by Arch Linux.
+        # https://github.com/microsoft/playwright-python/issues/3036
+        - playwright
     versioning-strategy: increase
