@@ -235,7 +235,7 @@ def add_or_remove_tag(
 
 
 async def scrape_and_check(
-    session: cronet.Session,
+    session: cronet.RetrySession,
     url: str,
 ) -> tuple[scraper.Page | None, LinkStatus, str | None, str | None]:
     scraper_result = await scraper.scrape_page(session, url)
@@ -360,7 +360,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     note_metadata: Metadata,
     at_client: ArchiveTodayClient,
     wm_client: WaybackMachineClient,
-    check_session: cronet.Session,
+    check_session: cronet.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
     user_options: MaintainCollectionOptions,
 ) -> None:
@@ -432,7 +432,7 @@ async def maintain_raindrop(  # noqa: PLR0913
     raindrop: RaindropOut,
     at_client: ArchiveTodayClient,
     wm_client: WaybackMachineClient,
-    check_session: cronet.Session,
+    check_session: cronet.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
     user_options: MaintainCollectionOptions,
 ) -> None:

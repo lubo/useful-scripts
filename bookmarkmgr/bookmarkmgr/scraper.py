@@ -6,7 +6,7 @@ from http import HTTPStatus
 from yarl import URL
 
 from bookmarkmgr import asyncio, cronet
-from bookmarkmgr.cronet import RequestError, ResponseStatus, Session
+from bookmarkmgr.cronet import RequestError, ResponseStatus, RetrySession
 
 INVALID_HTML_PARENTS = {
     "base",
@@ -118,7 +118,7 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
 
 
 async def scrape_page(
-    session: Session,
+    session: RetrySession,
     url: str,
 ) -> Result:
     parsed_url = URL(url)
