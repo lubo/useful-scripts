@@ -68,7 +68,7 @@ class RateLimiter:
     async def __aenter__(self) -> None:
         await self._semaphore.acquire()
 
-    async def __aexit__(self, *args: object, **kwargs: Any) -> None:
+    async def __aexit__(self, *_: object) -> None:
         jitter = random.uniform(0, self.jitter)  # noqa: S311
         task = asyncio.create_task(
             self._release(time.time() + self.period + jitter),
@@ -114,8 +114,8 @@ class ThreadSafeEvent(Event):
 
     _loop: AbstractEventLoop
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self) -> None:
+        super().__init__()
 
         self._loop = asyncio.get_event_loop()
 
