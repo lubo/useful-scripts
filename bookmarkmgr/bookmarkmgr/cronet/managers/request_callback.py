@@ -1,6 +1,6 @@
 import contextlib
 from http import HTTPStatus
-from typing import Any, cast, Self, TYPE_CHECKING
+from typing import cast, Self, TYPE_CHECKING
 
 from bookmarkmgr.asyncio import ThreadSafeEvent
 from bookmarkmgr.cronet._cronet import ffi, lib
@@ -232,8 +232,7 @@ class RequestCallbackManager:
 
     async def __aexit__(
         self,
-        *args: Any,  # noqa: PYI036
-        **kwargs: Any,
+        *_: object,
     ) -> None:
         if self._callback is None:
             return

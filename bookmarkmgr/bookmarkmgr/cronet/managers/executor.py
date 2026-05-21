@@ -1,7 +1,7 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
-from typing import Any, Self, TYPE_CHECKING
+from typing import Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -44,8 +44,7 @@ class ExecutorManager:
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
-        *args: Any,  # noqa: PYI036
-        **kwargs: Any,
+        *_: object,
     ) -> None:
         self.shutdown(process_pending=exc_type is None)
 

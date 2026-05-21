@@ -1,5 +1,8 @@
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Protocol, Self
+from typing import Any, Protocol, Self, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 class _HasSession[ST](Protocol):
@@ -18,7 +21,8 @@ class ClientSessionContextManagerMixin[
 
     async def __aexit__(
         self,
-        *args: Any,  # noqa: PYI036
-        **kwargs: Any,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
-        await self._session.__aexit__(*args, **kwargs)
+        await self._session.__aexit__(exc_type, exc_value, traceback)

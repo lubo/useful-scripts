@@ -70,8 +70,7 @@ class Session:
 
     async def __aexit__(
         self,
-        *args: Any,  # noqa: PYI036
-        **kwargs: Any,
+        *_: object,
     ) -> None:
         self.close()
 
