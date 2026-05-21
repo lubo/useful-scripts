@@ -87,6 +87,19 @@ class ClientSession(aiohttp.ClientSession):
         )
 
     @override
+    def request(
+        self,
+        method: str,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
+    ) -> _RequestContextManager:
+        return super().request(
+            method,
+            str_or_url,
+            **kwargs,
+        )
+
+    @override
     def get(
         self,
         str_or_url: StrOrURL,
@@ -104,6 +117,61 @@ class ClientSession(aiohttp.ClientSession):
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().options(
+            str_or_url,
+            **kwargs,
+        )
+
+    @override
+    def head(
+        self,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
+    ) -> _RequestContextManager:
+        return super().head(
+            str_or_url,
+            **kwargs,
+        )
+
+    @override
+    def post(
+        self,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
+    ) -> _RequestContextManager:
+        return super().post(
+            str_or_url,
+            **kwargs,
+        )
+
+    @override
+    def put(
+        self,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
+    ) -> _RequestContextManager:
+        return super().put(
+            str_or_url,
+            **kwargs,
+        )
+
+    @override
+    def patch(
+        self,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
+    ) -> _RequestContextManager:
+        return super().patch(
+            str_or_url,
+            **kwargs,
+        )
+
+    @override
+    def delete(
+        self,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
+    ) -> _RequestContextManager:
+        return super().delete(
             str_or_url,
             **kwargs,
         )
