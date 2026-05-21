@@ -1,5 +1,7 @@
 from typing import NewType
 
+from yarl import URL
+
 Buffer = NewType("Buffer", object)
 Engine = NewType("Engine", object)
 EngineParams = NewType("EngineParams", object)
@@ -14,3 +16,5 @@ UrlRequest = NewType("UrlRequest", object)
 UrlRequestCallback = NewType("UrlRequestCallback", object)
 UrlResponseInfo = NewType("UrlResponseInfo", object)
 UrlRequestParams = NewType("UrlRequestParams", object)
+
+type StrOrURL = str | URL

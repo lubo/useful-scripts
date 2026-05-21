@@ -2,6 +2,7 @@ import asyncio
 from html.parser import HTMLParser
 from http import HTTPStatus
 import itertools
+from typing import NotRequired, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.cronet import Error as CronetError
 from bookmarkmgr.cronet import RateLimitedSession
@@ -9,6 +10,9 @@ from bookmarkmgr.logging import get_logger
 from bookmarkmgr.types import Failure, Result, Success
 
 from . import ClientSessionContextManagerMixin
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 logger = get_logger("bookmarkmgr/AT")
 
@@ -33,6 +37,11 @@ def _extract_text(html: str) -> str:
     return text
 
 
+class _RequestParams(TypedDict):
+    url: str
+    params: NotRequired[Mapping[str, str]]
+
+
 class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
     def __init__(self) -> None:
         self._session = RateLimitedSession(
@@ -41,7 +50,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
 
     async def _archive_page(self, url: str) -> Result[str, str]:
         archival_url = None
-        request_params = {
+        request_params: _RequestParams = {
             "url": "https://archive.ph/submit/",
             "params": {
                 "url": url,

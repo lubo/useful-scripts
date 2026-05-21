@@ -1,4 +1,4 @@
-from typing import Any, TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 from ._cronet import lib
 
@@ -7,23 +7,23 @@ if TYPE_CHECKING:
 
 
 class Error(Exception):
+    @override
     def __init__(
         self,
-        *args: Any,
+        *args: object,
         code: int | None = None,
-        **kwargs: Any,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(*args)
 
         self.code = code
 
 
 class NotContextManagerError(RuntimeError):
-    def __init__(self, *args: Any, **kwargs: Any):
+    @override
+    def __init__(self, *args: object):
         super().__init__(
             "This object must be used as a context manager",
             *args,
-            **kwargs,
         )
 
 

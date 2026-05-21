@@ -2,7 +2,7 @@ import asyncio
 from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
-from typing import Any, cast, override, Self, TYPE_CHECKING
+from typing import cast, override, Self, TYPE_CHECKING, TypedDict, Unpack
 
 from yarl import URL
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
     from http.client import HTTPResponse
 
-    from .types import Engine
+    from .types import Engine, StrOrURL
 
 INIT_MAX_RETRY_ATTEMPTS = 5
 
@@ -56,6 +56,11 @@ RETRYABLE_STATUS_CODES = {
     *RATE_LIMIT_STATUS_CODES,
     *TRANSIENT_ERROR_STATUS_CODES,
 }
+
+
+class _SessionRequestOptions(TypedDict, total=False):
+    params: Mapping[str, str]
+    allow_redirects: bool
 
 
 class Session:
@@ -119,37 +124,66 @@ class Session:
         _raise_for_error_result(lib.Cronet_Engine_Shutdown(self._engine))
         self._dispose_engine()
 
-    async def delete(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("DELETE", *args, **kwargs)
+    async def delete(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("DELETE", url, **kwargs)
 
-    async def get(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("GET", *args, **kwargs)
+    async def get(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("GET", url, **kwargs)
 
-    async def head(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("HEAD", *args, **kwargs)
+    async def head(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("HEAD", url, **kwargs)
 
-    async def options(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("OPTIONS", *args, **kwargs)
+    async def options(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("OPTIONS", url, **kwargs)
 
-    async def patch(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("PATCH", *args, **kwargs)
+    async def patch(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("PATCH", url, **kwargs)
 
-    async def post(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("POST", *args, **kwargs)
+    async def post(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("POST", url, **kwargs)
 
-    async def put(self, *args: Any, **kwargs: Any) -> Response:
-        return await self.request("PUT", *args, **kwargs)
+    async def put(
+        self,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
+        return await self.request("PUT", url, **kwargs)
 
     async def request(
         self,
         method: str,
-        url: str | URL,
-        *,
-        params: Mapping[str, str] | None = None,
-        allow_redirects: bool = True,
+        url: StrOrURL,
+        **kwargs: Unpack[_SessionRequestOptions],
     ) -> Response:
         if self._engine is None:
             raise NotContextManagerError
+
+        allow_redirects = kwargs.get("allow_redirects", True)
+        params = kwargs.get("params")
 
         # This option is preserved to preserve backwards compatibility.
         # However, support for redirects is currently not necessary and
@@ -235,40 +269,99 @@ class Session:
         return response
 
 
+class _RetrySessionOptions(TypedDict, total=False):
+    rate_limit_timeout: float
+
+
+type _RetryPredicate = Callable[[Response], Awaitable[bool]] | None
+
+
+class _RetrySessionRequestOptions(_SessionRequestOptions, total=False):
+    retry_predicate: _RetryPredicate
+
+
 class RetrySession(Session):
+    @override
     def __init__(
         self,
-        *args: Any,
-        rate_limit_timeout: float = 60,
-        **kwargs: Any,
+        **kwargs: Unpack[_RetrySessionOptions],
     ) -> None:
-        super().__init__(
-            *args,
-            **kwargs,
-        )
+        super().__init__()
 
-        self.__rate_limit_timeout = rate_limit_timeout
+        self.__rate_limit_timeout = kwargs.get("rate_limit_timeout", 60)
 
     async def _request(
         self,
         method: str,
-        url: str | URL,
-        *args: Any,
+        url: StrOrURL,
+        *,
         is_retry: bool,
-        **kwargs: Any,
+        **kwargs: Unpack[_SessionRequestOptions],
     ) -> Response:
         if is_retry:
             logger.debug("Retrying %s %s", method, url)
 
-        return await super().request(method, url, *args, **kwargs)
+        return await super().request(method, url, **kwargs)
+
+    if TYPE_CHECKING:
+
+        @override
+        async def delete(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
+
+        @override
+        async def get(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
+
+        @override
+        async def head(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
+
+        @override
+        async def options(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
+
+        @override
+        async def patch(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
+
+        @override
+        async def post(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
+
+        @override
+        async def put(
+            self,
+            url: StrOrURL,
+            **kwargs: Unpack[_RetrySessionRequestOptions],
+        ) -> Response: ...
 
     @override
     async def request(  # noqa: C901
         self,
         method: str,
-        *args: Any,
-        retry_predicate: Callable[[Response], Awaitable[bool]] | None = None,
-        **kwargs: Any,
+        url: StrOrURL,
+        *,
+        retry_predicate: _RetryPredicate = None,
+        **kwargs: Unpack[_SessionRequestOptions],
     ) -> Response:
         attempt = 1
         factor = 1
@@ -284,7 +377,7 @@ class RetrySession(Session):
             try:
                 response = await self._request(
                     method,
-                    *args,
+                    url,
                     is_retry=is_retry,
                     **kwargs,
                 )
@@ -349,25 +442,35 @@ class RetrySession(Session):
 
 
 class RateLimitedSession(RateLimiterMixin, RetrySession):
+    @override
     def __init__(
         self,
-        *args: Any,
+        *,
         rate_limit: int,
         rate_limit_period: float = 60,
-        **kwargs: Any,
     ) -> None:
         super().__init__(
-            *args,
-            **kwargs,
             rate_limit=rate_limit,
             rate_limit_period=rate_limit_period,
             rate_limit_timeout=rate_limit_period,
         )
 
     @override
-    async def _request(self, *args: Any, **kwargs: Any) -> Response:
+    async def _request(
+        self,
+        method: str,
+        url: StrOrURL,
+        *,
+        is_retry: bool,
+        **kwargs: Unpack[_SessionRequestOptions],
+    ) -> Response:
         async with self._RateLimiterMixin_rate_limiter:
-            return await super()._request(*args, **kwargs)
+            return await super()._request(
+                method,
+                url,
+                is_retry=is_retry,
+                **kwargs,
+            )
 
     @override
     def close(self) -> None:
@@ -377,13 +480,14 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
 
 
 class PerHostnameRateLimitedSession(RetrySession):
+    @override
     def __init__(
         self,
-        *args: Any,
+        *,
         host_rate_limits: Iterable[tuple[str, int, float, float]],
-        **kwargs: Any,
+        **kwargs: Unpack[_RetrySessionOptions],
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
         self.__rate_limiters = {
             hostname.lower(): RateLimiter(limit, period, jitter)
@@ -394,9 +498,10 @@ class PerHostnameRateLimitedSession(RetrySession):
     async def _request(
         self,
         method: str,
-        url: str | URL,
-        *args: Any,
-        **kwargs: Any,
+        url: StrOrURL,
+        *,
+        is_retry: bool,
+        **kwargs: Unpack[_SessionRequestOptions],
     ) -> Response:
         if isinstance(url, str):
             url = URL(url)
@@ -411,7 +516,12 @@ class PerHostnameRateLimitedSession(RetrySession):
             self.__rate_limiters[hostname] = RateLimiter(1, 1)
 
         async with self.__rate_limiters[hostname]:
-            return await super()._request(method, url, *args, **kwargs)
+            return await super()._request(
+                method,
+                url,
+                is_retry=is_retry,
+                **kwargs,
+            )
 
     @override
     def close(self) -> None:
