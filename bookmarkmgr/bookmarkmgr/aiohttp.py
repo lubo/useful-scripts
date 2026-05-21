@@ -1,6 +1,6 @@
 import asyncio
 from http import HTTPStatus
-from typing import Any, override, TYPE_CHECKING
+from typing import Any, override, TYPE_CHECKING, Unpack
 
 import aiohttp
 from aiohttp import (
@@ -20,7 +20,8 @@ from .logging import get_logger
 if TYPE_CHECKING:
     from types import SimpleNamespace
 
-    from aiohttp.client import _RequestContextManager
+    from aiohttp.client import _RequestContextManager, _RequestOptions
+    from aiohttp.typedefs import StrOrURL
 
 logger = get_logger()
 
@@ -88,26 +89,22 @@ class ClientSession(aiohttp.ClientSession):
     @override
     def get(
         self,
-        *args: Any,
-        allow_redirects: bool = False,
-        **kwargs: Any,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().get(
-            *args,
-            allow_redirects=allow_redirects,
+            str_or_url,
             **kwargs,
         )
 
     @override
     def options(
         self,
-        *args: Any,
-        allow_redirects: bool = False,
-        **kwargs: Any,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().options(
-            *args,
-            allow_redirects=allow_redirects,
+            str_or_url,
             **kwargs,
         )
 
