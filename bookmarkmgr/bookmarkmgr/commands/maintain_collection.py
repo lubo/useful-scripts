@@ -439,7 +439,7 @@ async def maintain_raindrop(  # noqa: PLR0913
     note_metadata = metadata_from_note(raindrop["note"])
     task_group_error = None
     updated_raindrop_with_defauls = TypedDefaultsDict[RaindropIn, RaindropOut](
-        defaults=raindrop,
+        raindrop,
     )
 
     try:

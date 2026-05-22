@@ -52,7 +52,6 @@ module = [
     "bookmarkmgr.clients",
     "bookmarkmgr.clients.raindrop",
     "bookmarkmgr.clients.wayback_machine",
-    "bookmarkmgr.collections",
     "bookmarkmgr.commands.maintain_collection",
 ]
 disallow_any_decorated = false
