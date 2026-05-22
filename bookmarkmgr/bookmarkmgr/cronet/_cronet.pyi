@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Literal, NewType
+from typing import Any, Literal, NewType, ParamSpec, TypeVar
 
 from .types import (
     Buffer,
@@ -17,6 +17,9 @@ from .types import (
     UrlRequestParams,
     UrlResponseInfo,
 )
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 type _Executor_Execute = Callable[
     [Executor, Runnable],
@@ -53,10 +56,10 @@ _Handle = NewType("_Handle", object)
 # ruff: noqa: N802
 
 class _FFI:
-    def cast(self, c_type: Literal["char*"], value: Any) -> String: ...
-    def def_extern(self) -> Callable[..., None]: ...
-    def from_handle(self, handle: _Handle) -> Any: ...
-    def new_handle(self, obj: Any) -> _Handle: ...
+    def cast(self, c_type: Literal["char*"], value: object) -> String: ...
+    def def_extern(self) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]: ...
+    def from_handle(self, handle: _Handle) -> Any: ...  # type: ignore[explicit-any]
+    def new_handle(self, obj: object) -> _Handle: ...
     def string(self, cdata: String, maxlen: int = ...) -> bytes: ...
 
 class _Lib:

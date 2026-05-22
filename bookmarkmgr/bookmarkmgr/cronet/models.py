@@ -31,14 +31,19 @@ class Response(ResponseStatus):
     reason: str
     charset: str = "utf-8"
     content: bytes = b""
-    headers: Message = field(default_factory=Message)
+    headers: Message[str, str] = field(
+        # Lambda is necessary to appease the type checker.
+        default_factory=lambda: Message(),  # noqa: PLW0108
+    )
     redirect_url: str | None = None
 
     def info(self) -> Message:
         return self.headers
 
-    def json(self) -> Any:
-        return json.loads(self.text)
+    def json(self) -> Any:  # type: ignore[explicit-any]
+        return json.loads(  # type: ignore[misc]
+            self.text,
+        )
 
     @property
     def text(self) -> str:

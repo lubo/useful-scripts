@@ -54,12 +54,6 @@ module = [
     "bookmarkmgr.clients.wayback_machine",
     "bookmarkmgr.collections",
     "bookmarkmgr.commands.maintain_collection",
-    "bookmarkmgr.cronet._cronet",
-    "bookmarkmgr.cronet.managers.executor",
-    "bookmarkmgr.cronet.managers.request_callback",
-    "bookmarkmgr.cronet.models",
-    "bookmarkmgr.cronet.utils",
-    "tests.test_cronet",
 ]
 disallow_any_decorated = false
 disallow_any_explicit = false

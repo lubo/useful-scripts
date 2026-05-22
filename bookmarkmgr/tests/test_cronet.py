@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(  # type: ignore[misc]
+    scope="session",
+)
 async def cronet_session() -> AsyncIterator[Session]:
     session = Session()
 
@@ -46,10 +48,11 @@ async def test_http2_fingerprint(cronet_session: Session) -> None:
         "https://tls.browserleaks.com/http2",
         allow_redirects=False,
     )
+    fingerprints: dict[str, object] = response.json()
 
     # Chrome 146
     expected = "52d84b11737d980aef856699f885ca86"
-    actual = response.json().get("akamai_hash")
+    actual = fingerprints.get("akamai_hash")
 
     assert actual == expected
 
@@ -66,7 +69,7 @@ async def test_quic_fingerprint(cronet_session: Session) -> None:
         "https://quic.browserleaks.com/",
         allow_redirects=False,
     )
-    fingerprints = response.json()
+    fingerprints: dict[str, object] = response.json()
 
     # Chrome 146
     expected = {
@@ -84,7 +87,7 @@ async def test_tls_fingerprint(cronet_session: Session) -> None:
         "https://tls.browserleaks.com/tls",
         allow_redirects=False,
     )
-    fingerprints = response.json()
+    fingerprints: dict[str, object] = response.json()
 
     # Chrome 146
     expected = {
