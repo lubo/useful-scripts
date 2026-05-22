@@ -93,22 +93,6 @@ class RateLimiter:
             task.cancel()
 
 
-class RateLimiterMixin:
-    def __init__(
-        self,
-        *args: Any,
-        rate_limit: int,
-        rate_limit_period: float = 60,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-
-        self._RateLimiterMixin_rate_limiter = RateLimiter(
-            rate_limit,
-            rate_limit_period,
-        )
-
-
 class ThreadSafeEvent(Event):
     """CAVEAT: clear() and set() don't take effect immediately."""
 

@@ -14,7 +14,6 @@ from aiohttp import (
 )
 from aiohttp_retry import ExponentialRetry, RetryClient
 
-from .asyncio import RateLimiterMixin
 from .logging import get_logger
 
 if TYPE_CHECKING:
@@ -22,6 +21,8 @@ if TYPE_CHECKING:
 
     from aiohttp.client import _RequestContextManager, _RequestOptions
     from aiohttp.typedefs import StrOrURL
+
+    from .asyncio import RateLimiter
 
 logger = get_logger()
 
@@ -177,7 +178,18 @@ class ClientSession(aiohttp.ClientSession):
         )
 
 
-class RateLimitedClientSession(RateLimiterMixin, ClientSession):
+class RateLimitedClientSession(ClientSession):
+    @override
+    def __init__(
+        self,
+        *args: Any,
+        rate_limiter: RateLimiter,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
+        self._RateLimiterMixin_rate_limiter = rate_limiter
+
     @override
     async def _request(self, *args: Any, **kwargs: Any) -> ClientResponse:
         async with self._RateLimiterMixin_rate_limiter:
@@ -246,9 +258,9 @@ class RateLimitedRetryClientSession(RetryClientSession):
     def __init__(
         self,
         *args: Any,
+        rate_limiter: RateLimiter,
         attempts: int = 3,
         connection_limit: int | None = None,
-        rate_limit_period: float = 60,
         start_timeout: float = 0.25,
         **kwargs: Any,
     ) -> None:
@@ -258,7 +270,7 @@ class RateLimitedRetryClientSession(RetryClientSession):
             client_session=RateLimitedClientSession(
                 *args,
                 **kwargs,
-                rate_limit_period=rate_limit_period,
+                rate_limiter=rate_limiter,
             ),
             connection_limit=connection_limit,
             retry_options=RateLimitRetry(
@@ -269,7 +281,7 @@ class RateLimitedRetryClientSession(RetryClientSession):
                     ClientPayloadError,
                     asyncio.TimeoutError,
                 },
-                rate_limit_timeout=rate_limit_period,
+                rate_limit_timeout=rate_limiter.period,
                 start_timeout=start_timeout,
             ),
         )

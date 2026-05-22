@@ -3,6 +3,7 @@ import math
 from typing import Any, cast, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
+from bookmarkmgr.asyncio import RateLimiter
 
 from . import ClientSessionContextManagerMixin
 
@@ -62,7 +63,7 @@ class RaindropClient(
             headers={
                 "Authorization": f"Bearer {api_key}",
             },
-            rate_limit=120,
+            rate_limiter=RateLimiter(120),
         )
 
     async def _load_collection_page_items(
