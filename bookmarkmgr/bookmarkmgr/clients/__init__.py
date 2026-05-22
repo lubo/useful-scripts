@@ -1,5 +1,5 @@
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Protocol, Self, TYPE_CHECKING
+from typing import Protocol, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -10,7 +10,7 @@ class _HasSession[ST](Protocol):
 
 
 class ClientSessionContextManagerMixin[
-    ST: AbstractAsyncContextManager[Any],
+    ST: AbstractAsyncContextManager[object],
 ](
     _HasSession[ST],
 ):
