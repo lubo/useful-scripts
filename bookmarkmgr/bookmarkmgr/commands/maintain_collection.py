@@ -68,7 +68,7 @@ class MaintainCollectionOptions:
 
 
 @asynccontextmanager
-async def get_progress_bar(
+async def get_progress_bar(  # type: ignore[no-any-unimported]
     manager: enlighten.Manager,
     description: str,
     **kwargs: Any,

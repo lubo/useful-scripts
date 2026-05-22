@@ -1,10 +1,10 @@
 [tool.mypy]
 check_untyped_defs = true
-#disallow_any_decorated = true
-#disallow_any_explicit = true
-#disallow_any_expr = true
+disallow_any_decorated = true
+disallow_any_explicit = true
+disallow_any_expr = true
 disallow_any_generics = true
-#disallow_any_unimported = true
+disallow_any_unimported = true
 disallow_incomplete_defs = true
 disallow_subclassing_any = true
 disallow_untyped_calls = true
@@ -42,6 +42,28 @@ module = [
     "enlighten",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "bookmarkmgr.__main__",
+    "bookmarkmgr.aiohttp",
+    "bookmarkmgr.asyncio",
+    "bookmarkmgr.checks.link_status",
+    "bookmarkmgr.clients",
+    "bookmarkmgr.clients.raindrop",
+    "bookmarkmgr.clients.wayback_machine",
+    "bookmarkmgr.collections",
+    "bookmarkmgr.commands.maintain_collection",
+    "bookmarkmgr.cronet._cronet",
+    "bookmarkmgr.cronet.managers.executor",
+    "bookmarkmgr.cronet.managers.request_callback",
+    "bookmarkmgr.cronet.models",
+    "bookmarkmgr.cronet.utils",
+    "tests.test_cronet",
+]
+disallow_any_decorated = false
+disallow_any_explicit = false
+disallow_any_expr = false
 
 [tool.poetry]
 name = "bookmarkmgr"
