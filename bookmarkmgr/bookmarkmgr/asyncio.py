@@ -2,7 +2,7 @@ import asyncio
 from asyncio import AbstractEventLoop, Event, Lock, Semaphore, Task, TaskGroup
 import random
 import time
-from typing import Any, cast, override, TYPE_CHECKING
+from typing import cast, override, TYPE_CHECKING
 
 from overrides import override as runtime_override
 
@@ -19,7 +19,7 @@ class ForgivingTaskGroup(TaskGroup):
 
     _parent_cancel_requested: bool
 
-    @runtime_override
+    @runtime_override  # type: ignore[misc]
     def _is_base_error(self, exc: BaseException) -> bool:
         return cast(
             "bool",
@@ -29,7 +29,7 @@ class ForgivingTaskGroup(TaskGroup):
     @override
     def _on_task_done(
         self,
-        task: Task[Any],
+        task: Task[object],
     ) -> None:
         if (
             task.cancelled()

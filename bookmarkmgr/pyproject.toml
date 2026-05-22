@@ -47,7 +47,6 @@ ignore_missing_imports = true
 module = [
     "bookmarkmgr.__main__",
     "bookmarkmgr.aiohttp",
-    "bookmarkmgr.asyncio",
     "bookmarkmgr.clients.raindrop",
     "bookmarkmgr.clients.wayback_machine",
     "bookmarkmgr.commands.maintain_collection",
