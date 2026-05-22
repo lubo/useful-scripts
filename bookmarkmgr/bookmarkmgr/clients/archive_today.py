@@ -4,6 +4,7 @@ from http import HTTPStatus
 import itertools
 from typing import NotRequired, TYPE_CHECKING, TypedDict
 
+from bookmarkmgr.asyncio import RateLimiter
 from bookmarkmgr.cronet import Error as CronetError
 from bookmarkmgr.cronet import RateLimitedSession
 from bookmarkmgr.logging import get_logger
@@ -45,7 +46,9 @@ class _RequestParams(TypedDict):
 class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
     def __init__(self) -> None:
         self._session = RateLimitedSession(
-            rate_limit=6,
+            rate_limiter=RateLimiter(
+                limit=6,
+            ),
         )
 
     async def _archive_page(self, url: str) -> Result[str, str]:

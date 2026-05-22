@@ -6,7 +6,7 @@ from typing import cast, override, Self, TYPE_CHECKING, TypedDict, Unpack
 
 from yarl import URL
 
-from bookmarkmgr.asyncio import RateLimiter, RateLimiterMixin
+from bookmarkmgr.asyncio import RateLimiter
 
 from ._cronet import lib
 from .default_headers import DEFAULT_HEADERS
@@ -441,19 +441,17 @@ class RetrySession(Session):
             attempt += 1
 
 
-class RateLimitedSession(RateLimiterMixin, RetrySession):
+class RateLimitedSession(RetrySession):
     @override
     def __init__(
         self,
-        *,
-        rate_limit: int,
-        rate_limit_period: float = 60,
+        rate_limiter: RateLimiter,
     ) -> None:
         super().__init__(
-            rate_limit=rate_limit,
-            rate_limit_period=rate_limit_period,
-            rate_limit_timeout=rate_limit_period,
+            rate_limit_timeout=rate_limiter.period,
         )
+
+        self._rate_limiter = rate_limiter
 
     @override
     async def _request(
@@ -464,7 +462,7 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
         is_retry: bool,
         **kwargs: Unpack[_SessionRequestOptions],
     ) -> Response:
-        async with self._RateLimiterMixin_rate_limiter:
+        async with self._rate_limiter:
             return await super()._request(
                 method,
                 url,
@@ -476,7 +474,7 @@ class RateLimitedSession(RateLimiterMixin, RetrySession):
     def close(self) -> None:
         super().close()
 
-        self._RateLimiterMixin_rate_limiter.close()
+        self._rate_limiter.close()
 
 
 class PerHostnameRateLimitedSession(RetrySession):
