@@ -48,7 +48,6 @@ module = [
     "bookmarkmgr.__main__",
     "bookmarkmgr.aiohttp",
     "bookmarkmgr.asyncio",
-    "bookmarkmgr.checks.link_status",
     "bookmarkmgr.clients",
     "bookmarkmgr.clients.raindrop",
     "bookmarkmgr.clients.wayback_machine",

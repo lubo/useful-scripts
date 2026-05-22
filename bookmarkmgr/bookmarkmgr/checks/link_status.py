@@ -2,7 +2,7 @@ from enum import IntEnum, unique
 from http import HTTPStatus
 import itertools
 import re
-from typing import Any, cast, Protocol, TYPE_CHECKING
+from typing import cast, Protocol, TYPE_CHECKING
 from urllib.parse import quote, SplitResult, urlsplit
 
 import tld
@@ -118,7 +118,7 @@ def check_link_status(
 
 def _fix_url_quoting(
     url: SplitResult,
-    **_: Any,
+    **_: object,
 ) -> SplitResult:
     return url._replace(path=quote(url.path))
 
@@ -155,7 +155,7 @@ def _fix_url_subdomain(
 
 def _fix_url_trailing_slash(
     url: SplitResult,
-    **_: Any,
+    **_: object,
 ) -> SplitResult:
     return url._replace(
         path=(
