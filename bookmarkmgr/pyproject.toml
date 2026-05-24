@@ -39,12 +39,6 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = [
-    "enlighten",
-]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = [
     "bookmarkmgr.__main__",
     "bookmarkmgr.aiohttp",
     "bookmarkmgr.clients.raindrop",
@@ -65,10 +59,9 @@ authors = []
 aiohttp = "^3.13.5"
 aiohttp-retry = "^2.9.1"
 cffi = "^2.0.0"
-# >1.13.0 adds garbage characters.
-enlighten = "1.13.0"
 overrides = "^7.7.0"
 python = "^3.14"
+rich = "^15.0.0"
 tld = "^0.13"
 yarl = "^1.23.0"
 

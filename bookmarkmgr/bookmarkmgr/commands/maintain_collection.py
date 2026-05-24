@@ -1,12 +1,19 @@
 import asyncio
 import contextlib
-from contextlib import asynccontextmanager
+from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
 from typing import Any, TYPE_CHECKING
 
-import enlighten
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from bookmarkmgr import cronet, scraper
 from bookmarkmgr.asyncio import ForgivingTaskGroup
@@ -68,34 +75,11 @@ class MaintainCollectionOptions:
 
 
 @asynccontextmanager
-async def get_progress_bar(  # type: ignore[no-any-unimported]
-    manager: enlighten.Manager,
-    description: str,
-    **kwargs: Any,
-) -> AsyncIterator[enlighten.Counter]:
-    progress_bar = manager.counter(
-        desc=description,
-        unit="links",
-        **kwargs,
-    )
-    stop_refreshing = False
-
-    async def refresh() -> None:
-        while True:
-            if stop_refreshing:
-                progress_bar.close()
-                break
-
-            progress_bar.refresh()
-
-            await asyncio.sleep(1)
-
-    refresh_task = asyncio.create_task(refresh())
-    try:
-        yield progress_bar
-    finally:
-        stop_refreshing = True
-        await refresh_task
+async def as_async[T](
+    context_manager: AbstractContextManager[T],
+) -> AsyncIterator[T]:
+    with context_manager as value:
+        yield value
 
 
 async def process_archival_result(
@@ -488,33 +472,46 @@ async def maintain_collection(
     items = raindrop_client.get_collection_items(collection_id)
 
     duplicate_checker = DuplicateLinkChecker()
-    progress_bar_manager = enlighten.get_manager()
 
     async with (
-        get_progress_bar(
-            progress_bar_manager,
-            "Maintaining",
-        ) as maintaining_progress_bar,
+        as_async(
+            Progress(
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn("{task.completed}/{task.total}"),
+                TimeElapsedColumn(),
+                TimeRemainingColumn(),
+                expand=True,
+            ),
+        ) as progress,
         ArchiveTodayClient() as at_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
             host_rate_limits=user_options.host_rate_limits,
         ) as check_session,
         ForgivingTaskGroup() as task_group,
-        get_progress_bar(
-            progress_bar_manager,
-            "  Loading",
-            leave=False,
-        ) as loading_progress_bar,
     ):
+        maintaining_task = progress.add_task(
+            "Maintaining",
+            total=0,
+        )
+        loading_task = progress.add_task(
+            "  Loading",
+            total=0,
+        )
 
         def on_task_done(
             task: asyncio.Task[Any],  # noqa: ARG001
         ) -> None:
-            maintaining_progress_bar.count += 1
+            progress.advance(maintaining_task)
+
+        total = 0
 
         async for item in items:
-            loading_progress_bar.count += 1
+            progress.advance(loading_task)
+
+            total += 1
+            progress.update(maintaining_task, total=total)
 
             task = task_group.create_task(
                 maintain_raindrop(
@@ -532,8 +529,8 @@ async def maintain_collection(
 
             await asyncio.sleep(0)
 
-        maintaining_progress_bar.total = loading_progress_bar.count
+        progress.update(loading_task, visible=False)
 
         duplicate_checker.set_required_link_count(
-            maintaining_progress_bar.total,
+            total,
         )
