@@ -1,6 +1,6 @@
 import asyncio
 import math
-from typing import Any, cast, TYPE_CHECKING, TypedDict
+from typing import cast, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
 from bookmarkmgr.asyncio import RateLimiter
@@ -46,7 +46,7 @@ async def _enqueue_items(
 
 async def _generator_from_worker_queue(
     queue: _Queue,
-    worker: Awaitable[Any],
+    worker: Awaitable[object],
 ) -> AsyncIterator[RaindropOut]:
     while (item := await queue.get()) is not None:
         yield item

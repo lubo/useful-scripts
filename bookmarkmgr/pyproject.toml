@@ -40,9 +40,14 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = [
     "bookmarkmgr.__main__",
-    "bookmarkmgr.aiohttp",
     "bookmarkmgr.clients.raindrop",
     "bookmarkmgr.clients.wayback_machine",
+]
+disallow_any_expr = false
+
+[[tool.mypy.overrides]]
+module = [
+    "bookmarkmgr.aiohttp",
 ]
 disallow_any_explicit = false
 disallow_any_expr = false
