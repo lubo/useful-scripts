@@ -3,7 +3,8 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     commit-message:
       prefix: CI
     cooldown:
@@ -12,7 +13,8 @@ updates:
   - package-ecosystem: pip
     directory: /bookmarkmgr
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     allow:
       - dependency-type: all
     ignore:
@@ -29,7 +31,8 @@ updates:
   - package-ecosystem: pip
     directory: /bookmarkmgr
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     groups:
       all-packages:
         patterns:
@@ -52,7 +55,8 @@ updates:
   - package-ecosystem: pip
     directory: /bookmarks4diff
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     allow:
       - dependency-type: all
     ignore:
@@ -69,7 +73,8 @@ updates:
   - package-ecosystem: pip
     directory: /bookmarks4diff
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     groups:
       all-packages:
         patterns:
@@ -92,7 +97,8 @@ updates:
   - package-ecosystem: pip
     directory: /ytm
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     allow:
       - dependency-type: all
     ignore:
@@ -113,7 +119,8 @@ updates:
   - package-ecosystem: pip
     directory: /ytm
     schedule:
-      interval: daily
+      interval: cron
+      cronjob: 0 7 * * *
     groups:
       all-packages:
         patterns:
