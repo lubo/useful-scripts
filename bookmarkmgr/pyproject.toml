@@ -43,9 +43,7 @@ module = [
     "bookmarkmgr.aiohttp",
     "bookmarkmgr.clients.raindrop",
     "bookmarkmgr.clients.wayback_machine",
-    "bookmarkmgr.commands.maintain_collection",
 ]
-disallow_any_decorated = false
 disallow_any_explicit = false
 disallow_any_expr = false
 

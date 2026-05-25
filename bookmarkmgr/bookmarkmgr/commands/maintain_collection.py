@@ -4,7 +4,7 @@ from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
-from typing import Any, NoReturn, TYPE_CHECKING
+from typing import NoReturn, TYPE_CHECKING
 
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -79,20 +79,21 @@ async def as_async[T](
 @asynccontextmanager
 async def get_progress_bar(
     description: str,
-    **kwargs: Any,
+    *,
+    leave: bool = True,
 ) -> AsyncIterator[tqdm[NoReturn]]:
     stop_refreshing = False
 
     with tqdm(
         desc=description,
         dynamic_ncols=True,
+        leave=leave,
         unit="links",
-        **kwargs,
     ) as progress_bar:
         # Custom refresh task is used because tqdm cannot refresh the progress
         # bar every second.
         # https://github.com/tqdm/tqdm/issues/861
-        tqdm.monitor_interval = 0
+        progress_bar.__class__.monitor_interval = 0
 
         async def refresh() -> None:
             while True:
@@ -280,8 +281,8 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
     ],
     raindrop: RaindropIn,
     metadata: Metadata,
-    archival_tasks: list[asyncio.Task[Any]],
-    create_archival_tasks: Callable[[asyncio.TaskGroup], Any],
+    archival_tasks: list[asyncio.Task[None]],
+    create_archival_tasks: Callable[[asyncio.TaskGroup], object],
 ) -> None:
     page, link_status, error, fixed_url = await result_awaitable
     now = datetime.now(tz=UTC)
@@ -410,7 +411,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
             or datetime.now(tz=UTC) > last_check + timedelta(days=1)
         )
     ):
-        _ = task_group.create_task(
+        _: asyncio.Task[None] = task_group.create_task(
             process_scrape_and_check_result(
                 scrape_and_check(check_session, link),
                 raindrop,
@@ -520,7 +521,7 @@ async def maintain_collection(
     ):
 
         def on_task_done(
-            task: asyncio.Task[Any],  # noqa: ARG001
+            task: asyncio.Task[object],  # noqa: ARG001
         ) -> None:
             maintaining_progress_bar.update(1)
 
