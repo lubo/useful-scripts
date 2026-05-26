@@ -17,11 +17,11 @@ logger = get_logger("bookmarkmgr/WM")
 
 # Uncomment relevant errors when suppressing them is desired.
 _IGNORED_ERRORS = {
+    "error:gone",
     "error:no-access",
+    "error:not-found",
     # Some sites are permanently unavailable to WM
     # "error:service-unavailable",  # noqa: ERA001
-    # 410 Gone is classified as unknown error
-    # "error:unknown",  # noqa: ERA001
 }
 
 
