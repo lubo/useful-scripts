@@ -135,10 +135,12 @@ async def scrape_page(
     page = None
 
     async def retry_predicate(response: cronet.Response) -> bool:
+        nonlocal page
+
+        page = None
+
         if response.status_code != HTTPStatus.OK.value:
             return False
-
-        nonlocal page
 
         page = await asyncio.to_cpu_bound_giled_thread(
             _scrape_html,
