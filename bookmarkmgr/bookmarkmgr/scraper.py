@@ -30,7 +30,7 @@ class Response(ResponseStatus):
     redirect_url: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class ScrapedData:
     response: Response
     page: Page | None = None
