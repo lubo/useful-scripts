@@ -1,12 +1,24 @@
 import asyncio
 from http import HTTPStatus
-from typing import Any, override, TYPE_CHECKING, Unpack
+from typing import (
+    Any,
+    override,
+    TYPE_CHECKING,
+    TypedDict,
+    Unpack,
+)
 
 import aiohttp
 from aiohttp import (
+    BaseConnector,
     ClientConnectionError,
+    ClientMiddlewareType,
     ClientPayloadError,
+    ClientRequest,
     ClientResponse,
+    ClientTimeout,
+    ClientWebSocketResponse,
+    HttpVersion,
     TCPConnector,
     TraceConfig,
     TraceRequestEndParams,
@@ -17,10 +29,22 @@ from aiohttp_retry import ExponentialRetry, RetryClient
 from .logging import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable, Iterable, Sequence
     from types import SimpleNamespace
 
-    from aiohttp.client import _RequestContextManager, _RequestOptions
-    from aiohttp.typedefs import StrOrURL
+    from aiohttp.abc import AbstractCookieJar
+    from aiohttp.client import (
+        _CharsetResolver,
+        _RequestContextManager,
+        _RequestOptions,
+    )
+    from aiohttp.helpers import _SENTINEL, BasicAuth
+    from aiohttp.typedefs import (
+        JSONEncoder,
+        LooseCookies,
+        LooseHeaders,
+        StrOrURL,
+    )
 
     from .asyncio import RateLimiter
 
@@ -69,6 +93,40 @@ async def on_request_exception(
 trace_config = TraceConfig()
 trace_config.on_request_end.append(on_request_end)
 trace_config.on_request_exception.append(on_request_exception)
+
+
+class _ClientSessionOptions(TypedDict, total=False):
+    base_url: StrOrURL
+    connector: BaseConnector
+    loop: asyncio.AbstractEventLoop
+    cookies: LooseCookies
+    headers: LooseHeaders
+    proxy: StrOrURL
+    proxy_auth: BasicAuth
+    skip_auto_headers: Iterable[str]
+    auth: BasicAuth
+    json_serialize: JSONEncoder
+    request_class: type[ClientRequest]
+    response_class: type[ClientResponse]
+    ws_response_class: type[ClientWebSocketResponse]
+    version: HttpVersion
+    cookie_jar: AbstractCookieJar
+    connector_owner: bool
+    raise_for_status: bool | Callable[[ClientResponse], Awaitable[None]]
+    read_timeout: float | _SENTINEL
+    conn_timeout: float
+    timeout: object | ClientTimeout
+    auto_decompress: bool
+    trust_env: bool
+    requote_redirect_url: bool
+    trace_configs: list[TraceConfig]
+    read_bufsize: int
+    max_line_size: int
+    max_field_size: int
+    max_headers: int
+    fallback_charset_resolver: _CharsetResolver
+    middlewares: Sequence[ClientMiddlewareType]
+    ssl_shutdown_timeout: _SENTINEL | float | None
 
 
 class ClientSession(aiohttp.ClientSession):
@@ -182,11 +240,10 @@ class RateLimitedClientSession(ClientSession):
     @override
     def __init__(
         self,
-        *args: Any,
         rate_limiter: RateLimiter,
-        **kwargs: Any,
+        **kwargs: Unpack[_ClientSessionOptions],
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
         self.__rate_limiter = rate_limiter
 
@@ -266,9 +323,8 @@ class RateLimitedRetryClientSession(RetryClientSession):
             *args,
             **kwargs,
             client_session=RateLimitedClientSession(
-                *args,
+                rate_limiter,
                 **kwargs,
-                rate_limiter=rate_limiter,
             ),
             connection_limit=connection_limit,
             retry_options=RateLimitRetry(

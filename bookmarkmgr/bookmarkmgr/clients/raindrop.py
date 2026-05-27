@@ -59,7 +59,7 @@ class RaindropClient(
 ):
     def __init__(self, api_key: str) -> None:
         self._session = RateLimitedRetryClientSession(
-            "https://api.raindrop.io",
+            base_url="https://api.raindrop.io",
             headers={
                 "Authorization": f"Bearer {api_key}",
             },
