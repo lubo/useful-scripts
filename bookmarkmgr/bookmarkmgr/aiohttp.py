@@ -218,14 +218,12 @@ class RateLimitRetry(ExponentialRetry):
         self,
         attempt: int,
         response: ClientResponse | None = None,
-        *args: Any,
-        **kwargs: Any,
     ) -> float:
         if response is not None and response.status in RATE_LIMIT_STATUS_CODES:
             self.attempts += 1
             return self.__rate_limit_timeout
 
-        return super().get_timeout(attempt, response, *args, **kwargs)
+        return super().get_timeout(attempt, response)
 
 
 class RetryClientSession(RetryClient):
