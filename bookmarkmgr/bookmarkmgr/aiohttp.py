@@ -69,7 +69,7 @@ async def on_request_end(
     if params.response.ok:
         return
 
-    logger.error(
+    logger.debug(
         "%d %s: %s %s",
         params.response.status,
         params.response.reason,
@@ -86,7 +86,7 @@ async def on_request_exception(
     if isinstance(params.exception, asyncio.CancelledError):
         return
 
-    logger.error(
+    logger.debug(
         "%s: %s %s",
         params.exception,
         params.method,
