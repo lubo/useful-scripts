@@ -24,7 +24,11 @@ from aiohttp import (
     TraceRequestEndParams,
     TraceRequestExceptionParams,
 )
-from aiohttp_retry import ExponentialRetry, RetryClient
+from aiohttp_retry import (
+    EvaluateResponseCallbackType,
+    ExponentialRetry,
+    RetryClient,
+)
 
 from .logging import get_logger
 
@@ -259,14 +263,26 @@ class RateLimitedClientSession(ClientSession):
         self.__rate_limiter.close()
 
 
+class _ExponentialRetryOptions(TypedDict, total=False):
+    attempts: int
+    start_timeout: float
+    max_timeout: float
+    factor: float
+    statuses: set[int]
+    exceptions: set[type[Exception]]
+    methods: set[str]
+    retry_all_server_errors: bool
+    evaluate_response_callback: EvaluateResponseCallbackType
+
+
 class RateLimitRetry(ExponentialRetry):
+    @override
     def __init__(
         self,
-        *args: Any,
         rate_limit_timeout: float,
-        **kwargs: Any,
+        **kwargs: Unpack[_ExponentialRetryOptions],
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
         self.__rate_limit_timeout = rate_limit_timeout
 
