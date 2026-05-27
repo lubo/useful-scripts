@@ -19,7 +19,6 @@ from aiohttp import (
     ClientTimeout,
     ClientWebSocketResponse,
     HttpVersion,
-    TCPConnector,
     TraceConfig,
     TraceRequestEndParams,
     TraceRequestExceptionParams,
@@ -308,47 +307,21 @@ class RateLimitRetry(ExponentialRetry):
         return super().get_timeout(attempt, response)
 
 
-class RetryClientSession(RetryClient):
+class RateLimitedRetryClientSession(RetryClient):
     def __init__(
         self,
-        base_url: str | None = None,
-        *,
-        connection_limit: int | None = None,
-        raise_for_status: bool = True,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(
-            **kwargs,
-            base_url=base_url,
-            connector=(
-                None
-                if connection_limit is None
-                else TCPConnector(
-                    limit=connection_limit,
-                )
-            ),
-            raise_for_status=raise_for_status,
-        )
-
-
-class RateLimitedRetryClientSession(RetryClientSession):
-    def __init__(
-        self,
-        *args: Any,
         rate_limiter: RateLimiter,
+        *,
         attempts: int = 3,
-        connection_limit: int | None = None,
         start_timeout: float = 0.25,
-        **kwargs: Any,
+        **kwargs: Unpack[_ClientSessionOptions],
     ) -> None:
         super().__init__(
-            *args,
-            **kwargs,
             client_session=RateLimitedClientSession(
                 rate_limiter,
                 **kwargs,
             ),
-            connection_limit=connection_limit,
+            raise_for_status=True,
             retry_options=RateLimitRetry(
                 attempts=attempts,
                 evaluate_response_callback=self.response_callback,

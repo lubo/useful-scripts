@@ -4,7 +4,7 @@ import itertools
 import re
 from urllib.parse import urlsplit
 
-from aiohttp import ClientError, ClientResponseError
+from aiohttp import ClientError, ClientResponseError, TCPConnector
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
 from bookmarkmgr.asyncio import RateLimiter
@@ -42,7 +42,7 @@ class WaybackMachineClient(
             # [20]    exit 1     netcat web.archive.org 443
             # [12]    exit 1     netcat web.archive.org 443
             # [2]    exit 1     netcat web.archive.org 443
-            connection_limit=20,
+            connector=TCPConnector(limit=20),
             # https://archive.org/details/toomanyrequests_20191110
             rate_limiter=RateLimiter(15),
             start_timeout=30,
