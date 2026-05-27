@@ -137,6 +137,15 @@ class ClientSession(aiohttp.ClientSession):
     """Disables redirects by default to prevent protocol downgrades, etc."""
 
     @override
+    def __init__(
+        self,
+        **kwargs: Unpack[_ClientSessionOptions],
+    ) -> None:
+        kwargs.setdefault("trace_configs", [trace_config])
+
+        super().__init__(**kwargs)
+
+    @override
     async def _request(
         self,
         *args: Any,
@@ -308,8 +317,6 @@ class RetryClientSession(RetryClient):
         raise_for_status: bool = True,
         **kwargs: Any,
     ) -> None:
-        trace_configs = kwargs.pop("trace_configs", [trace_config])
-
         super().__init__(
             **kwargs,
             base_url=base_url,
@@ -321,7 +328,6 @@ class RetryClientSession(RetryClient):
                 )
             ),
             raise_for_status=raise_for_status,
-            trace_configs=trace_configs,
         )
 
 
