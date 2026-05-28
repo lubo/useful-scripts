@@ -29,6 +29,7 @@ from aiohttp_retry import (
     EvaluateResponseCallbackType,
     ExponentialRetry,
     RetryClient,
+    RetryOptionsBase,
 )
 
 from .logging import get_logger
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
         LooseHeaders,
         StrOrURL,
     )
+    from aiohttp_retry.client import _LoggerType, _RequestContext, _URL_TYPE
 
     from .asyncio import RateLimiter
 
@@ -323,7 +325,121 @@ class RateLimitRetry(ExponentialRetry):
         return super().get_timeout(attempt, response)
 
 
-class RateLimitedRetryClientSession(RetryClient):
+class _RetryClientOptions(TypedDict, total=False):
+    logger: _LoggerType
+    retry_options: RetryOptionsBase
+    raise_for_status: bool
+
+
+class _RetryClientRequestOptions(_RequestOptions, total=False):
+    retry_options: RetryOptionsBase
+    raise_for_status: bool  # type: ignore[misc]
+
+
+class RetryClientSession(RetryClient):
+    @override
+    def __init__(
+        self,
+        client_session: ClientSession,
+        **kwargs: Unpack[_RetryClientOptions],
+    ) -> None:
+        super().__init__(
+            client_session=client_session,
+            **kwargs,
+        )
+
+    @override
+    def request(  # type: ignore[override]
+        self,
+        method: str,
+        url: StrOrURL,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().request(
+            method,
+            url,
+            **kwargs,
+        )
+
+    @override
+    def get(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().get(
+            url,
+            **kwargs,
+        )
+
+    @override
+    def options(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().options(
+            url,
+            **kwargs,
+        )
+
+    @override
+    def head(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().head(
+            url,
+            **kwargs,
+        )
+
+    @override
+    def post(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().post(
+            url,
+            **kwargs,
+        )
+
+    @override
+    def put(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().put(
+            url,
+            **kwargs,
+        )
+
+    @override
+    def patch(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().patch(
+            url,
+            **kwargs,
+        )
+
+    @override
+    def delete(  # type: ignore[override]
+        self,
+        url: _URL_TYPE,
+        **kwargs: Unpack[_RetryClientRequestOptions],
+    ) -> _RequestContext:
+        return super().delete(
+            url,
+            **kwargs,
+        )
+
+
+class RateLimitedRetryClientSession(RetryClientSession):
     def __init__(
         self,
         rate_limiter: RateLimiter,
