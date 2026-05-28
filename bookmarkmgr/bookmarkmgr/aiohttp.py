@@ -1,7 +1,6 @@
 import asyncio
 from http import HTTPStatus
 from typing import (
-    Any,
     override,
     TYPE_CHECKING,
     TypedDict,
@@ -23,6 +22,9 @@ from aiohttp import (
     TraceRequestEndParams,
     TraceRequestExceptionParams,
 )
+from aiohttp.client import (
+    _RequestOptions,
+)
 from aiohttp_retry import (
     EvaluateResponseCallbackType,
     ExponentialRetry,
@@ -33,13 +35,13 @@ from .logging import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Sequence
+    from ssl import SSLContext
     from types import SimpleNamespace
 
     from aiohttp.abc import AbstractCookieJar
     from aiohttp.client import (
         _CharsetResolver,
         _RequestContextManager,
-        _RequestOptions,
     )
     from aiohttp.helpers import _SENTINEL, BasicAuth
     from aiohttp.typedefs import (
@@ -132,6 +134,13 @@ class _ClientSessionOptions(TypedDict, total=False):
     ssl_shutdown_timeout: _SENTINEL | float | None
 
 
+class _InternalRequestOptions(_RequestOptions, total=False):
+    timeout: ClientTimeout | _SENTINEL  # type: ignore[misc]
+    verify_ssl: bool | None
+    fingerprint: bytes | None
+    ssl_context: SSLContext | None
+
+
 class ClientSession(aiohttp.ClientSession):
     """Disables redirects by default to prevent protocol downgrades, etc."""
 
@@ -147,13 +156,15 @@ class ClientSession(aiohttp.ClientSession):
     @override
     async def _request(
         self,
-        *args: Any,
-        allow_redirects: bool = False,
-        **kwargs: Any,
+        method: str,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_InternalRequestOptions],
     ) -> ClientResponse:
+        kwargs.setdefault("allow_redirects", False)
+
         return await super()._request(
-            *args,
-            allow_redirects=allow_redirects,
+            method,
+            str_or_url,
             **kwargs,
         )
 
@@ -260,9 +271,14 @@ class RateLimitedClientSession(ClientSession):
         self.__rate_limiter = rate_limiter
 
     @override
-    async def _request(self, *args: Any, **kwargs: Any) -> ClientResponse:
+    async def _request(
+        self,
+        method: str,
+        str_or_url: StrOrURL,
+        **kwargs: Unpack[_InternalRequestOptions],
+    ) -> ClientResponse:
         async with self.__rate_limiter:
-            return await super()._request(*args, **kwargs)
+            return await super()._request(method, str_or_url, **kwargs)
 
     @override
     async def close(self) -> None:
