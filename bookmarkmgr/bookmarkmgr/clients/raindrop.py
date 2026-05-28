@@ -100,7 +100,7 @@ class RaindropClient(
                     1,
                     math.ceil(page["count"] / RAINDROPS_PER_PAGE),
                 ):
-                    _ = task_group.create_task(
+                    _: asyncio.Task[None] = task_group.create_task(
                         self._load_collection_page_items(
                             queue,
                             collection_id,
@@ -140,7 +140,10 @@ class RaindropClient(
                 f"&perpage={RAINDROPS_PER_PAGE}"
             ),
         ) as response:
-            return cast("CollectionPage", await response.json())
+            return cast(
+                "CollectionPage",
+                await response.json(),  # type: ignore[misc]
+            )
 
     async def update_raindrop(
         self,
