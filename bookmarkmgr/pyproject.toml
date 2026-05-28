@@ -41,7 +41,6 @@ warn_unused_ignores = true
 module = [
     "bookmarkmgr.__main__",
     "bookmarkmgr.aiohttp",
-    "bookmarkmgr.clients.wayback_machine",
 ]
 disallow_any_expr = false
 

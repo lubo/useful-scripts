@@ -2,6 +2,7 @@ import asyncio
 from http import HTTPStatus
 import itertools
 import re
+from typing import cast, TypedDict
 from urllib.parse import urlsplit
 
 from aiohttp import ClientError, ClientResponseError, TCPConnector
@@ -27,6 +28,32 @@ _IGNORED_ERRORS = {
 
 class WaybackMachineError(Exception):
     pass
+
+
+class _Closest(TypedDict):
+    url: str
+
+
+class _ArchivedSnapshots(TypedDict, total=False):
+    closest: _Closest
+
+
+class _AvailableResponse(TypedDict):
+    archived_snapshots: _ArchivedSnapshots
+
+
+class _ErrorStatusResponse(TypedDict):
+    message: str
+
+
+class _SuccessStatusResponse(TypedDict):
+    original_url: str
+    timestamp: str
+
+
+class _UnknownStatusResponse(TypedDict, total=False):
+    status: str
+    status_ext: str
 
 
 class WaybackMachineClient(
@@ -60,9 +87,9 @@ class WaybackMachineClient(
             "https://archive.org/wayback/available",
             params=request_paramaters,
         ) as response:
-            archived_snapshots = (await response.json())["archived_snapshots"]
+            body: _AvailableResponse = await response.json()  # type: ignore[misc]
 
-        if (closest := archived_snapshots.get("closest")) is not None:
+        if (closest := body["archived_snapshots"].get("closest")) is not None:
             logger.info("Archival entry found for %s", url)
 
             archival_url = closest["url"]
@@ -122,7 +149,11 @@ class WaybackMachineClient(
 
         logger.debug("Archiving in progress for %s", url)
 
-        data = {}
+        data: (
+            _ErrorStatusResponse
+            | _SuccessStatusResponse
+            | _UnknownStatusResponse
+        ) = {}
         delay_factor = 1
 
         # https://github.com/internetarchive/wayback-machine-webextension/blob/edebc9aa49c138fd784f94a1f70e47e0eb583dd9/webextension/scripts/background.js#L147
@@ -131,7 +162,7 @@ class WaybackMachineClient(
                 f"https://web.archive.org/save/status/{job_id}",
                 headers=request_headers,
             ) as response:
-                data = await response.json()
+                data = await response.json()  # type: ignore[misc]
 
             match data.get("status"):
                 case "pending":
@@ -155,12 +186,15 @@ class WaybackMachineClient(
                     break
                 case _:
                     if data.get("status_ext") in _IGNORED_ERRORS:
+                        data = cast("_ErrorStatusResponse", data)
                         return Failure(data["message"])
 
                     message = f"Unexpected status response for {url}: {data}"
                     raise WaybackMachineError(message)
 
         logger.info("Archived %s", url)
+
+        data = cast("_SuccessStatusResponse", data)
 
         return Success(
             f"https://web.archive.org/web/{data['timestamp']}/"
