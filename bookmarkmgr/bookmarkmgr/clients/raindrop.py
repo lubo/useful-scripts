@@ -14,6 +14,7 @@ RAINDROPS_PER_PAGE = 50
 
 
 class BaseRaindrop(TypedDict):
+    cover: str
     created: str
     link: str
     note: str

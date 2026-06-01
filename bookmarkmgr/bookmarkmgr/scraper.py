@@ -20,6 +20,7 @@ class Page:
     body_text: str = ""
     canonical_url: str | None = None
     default_lang_url: str | None = None
+    og_image: str | None = None
     og_url: str | None = None
     title: str = ""
 
@@ -39,7 +40,7 @@ class ScrapedData:
 type Result = RequestError | ScrapedData
 
 
-def _scrape_html(html: str) -> Page:  # noqa: C901
+def _scrape_html(html: str) -> Page:  # noqa: C901, PLR0915
     page = Page()
     path: list[str] = []
 
@@ -67,6 +68,8 @@ def _scrape_html(html: str) -> Page:  # noqa: C901
                         pass
             case "meta":
                 match attrs_dict.get("property"):
+                    case "og:image":
+                        page.og_image = attrs_dict.get("content")
                     case "og:url":
                         page.og_url = attrs_dict.get("content")
                     case _:

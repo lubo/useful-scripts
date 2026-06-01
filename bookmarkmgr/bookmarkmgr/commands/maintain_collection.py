@@ -311,6 +311,13 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
             else:
                 metadata["Canonical URL"] = canonical_url
 
+        # Raindrop sometimes fails to extract the cover image automatically.
+        if page.og_image and (
+            not raindrop["cover"]
+            or raindrop["cover"].startswith("https://rdl.ink/render/")
+        ):
+            raindrop["cover"] = page.og_image
+
     if link_status in BROKEN_LINK_STATUSES:
         try:
             broken_since = datetime.fromisoformat(
