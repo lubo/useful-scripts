@@ -2,7 +2,7 @@ import asyncio
 from html.parser import HTMLParser
 from http import HTTPStatus
 import itertools
-from typing import NotRequired, TYPE_CHECKING, TypedDict
+from typing import NotRequired, override, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.asyncio import RateLimiter
 from bookmarkmgr.cronet import Error as CronetError
@@ -22,20 +22,29 @@ class ArchiveTodayError(Exception):
     pass
 
 
+class _HtmlParser(HTMLParser):
+    __text: str
+
+    @override
+    def handle_data(self, data: str) -> None:
+        self.__text = " ".join(filter(len, [self.__text, data.strip()]))
+
+    @override
+    def reset(self) -> None:
+        super().reset()
+
+        self.__text = ""
+
+    @property
+    def text(self) -> str:
+        return self.__text
+
+
 def _extract_text(html: str) -> str:
-    text = ""
-
-    def handle_data(data: str) -> None:
-        nonlocal text
-
-        text = " ".join(filter(len, [text, data.strip()]))
-
-    html_parser = HTMLParser()
-    html_parser.handle_data = handle_data  # type: ignore[method-assign]
-
+    html_parser = _HtmlParser()
     html_parser.feed(html)
 
-    return text
+    return html_parser.text
 
 
 class _RequestParams(TypedDict):
