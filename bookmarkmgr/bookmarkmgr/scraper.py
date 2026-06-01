@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import gc
 from html.parser import HTMLParser
 from http import HTTPStatus
+from typing import override
 
 from yarl import URL
 
@@ -40,15 +41,13 @@ class ScrapedData:
 type Result = RequestError | ScrapedData
 
 
-def _scrape_html(html: str) -> Page:  # noqa: C901, PLR0915
-    page = Page()
-    path: list[str] = []
-
+class _HtmlParser(HTMLParser):
     def handle_selfclosingtag(
+        self,
         tag: str,
         attrs: list[tuple[str, str | None]],
     ) -> None:
-        if path != ["html", "head"]:
+        if self.__path != ["html", "head"]:
             return
 
         attrs_dict = {key: value for key, value in attrs}  # noqa: C416
@@ -59,65 +58,77 @@ def _scrape_html(html: str) -> Page:  # noqa: C901, PLR0915
                     case "alternate":
                         match attrs_dict.get("hreflang"):
                             case "x-default":
-                                page.default_lang_url = attrs_dict.get("href")
+                                self.__page.default_lang_url = attrs_dict.get(
+                                    "href",
+                                )
                             case _:
                                 pass
                     case "canonical":
-                        page.canonical_url = attrs_dict.get("href")
+                        self.__page.canonical_url = attrs_dict.get("href")
                     case _:
                         pass
             case "meta":
                 match attrs_dict.get("property"):
                     case "og:image":
-                        page.og_image = attrs_dict.get("content")
+                        self.__page.og_image = attrs_dict.get("content")
                     case "og:url":
-                        page.og_url = attrs_dict.get("content")
+                        self.__page.og_url = attrs_dict.get("content")
                     case _:
                         pass
             case _:
                 pass
 
-    def handle_data(data: str) -> None:
-        match path:
+    @override
+    def handle_data(self, data: str) -> None:
+        match self.__path:
             case ["html", "body"]:
-                page.body_text = data.strip()
+                self.__page.body_text = data.strip()
             case ["html", "head", "title"]:
-                page.title = data.strip()
+                self.__page.title = data.strip()
             case _:
                 pass
 
-    def handle_endtag(tag: str) -> None:
-        if len(path) > 0 and path[-1] == tag:
-            del path[-1]
+    @override
+    def handle_endtag(self, tag: str) -> None:
+        if len(self.__path) > 0 and self.__path[-1] == tag:
+            del self.__path[-1]
 
+    @override
     def handle_startendtag(
+        self,
         tag: str,
         attrs: list[tuple[str, str | None]],
     ) -> None:
-        handle_selfclosingtag(tag, attrs)
+        self.handle_selfclosingtag(tag, attrs)
 
+    @override
     def handle_starttag(
+        self,
         tag: str,
         attrs: list[tuple[str, str | None]],
     ) -> None:
-        handle_selfclosingtag(tag, attrs)
+        self.handle_selfclosingtag(tag, attrs)
 
         if tag not in INVALID_HTML_PARENTS:
-            path.append(tag)
+            self.__path.append(tag)
 
-    html_parser = HTMLParser()
-    html_parser.handle_data = handle_data  # type: ignore[method-assign]
-    html_parser.handle_endtag = handle_endtag  # type: ignore[method-assign]
-    html_parser.handle_startendtag = (  # type: ignore[method-assign]
-        handle_startendtag
-    )
-    html_parser.handle_starttag = (  # type: ignore[method-assign]
-        handle_starttag
-    )
+    @property
+    def page(self) -> Page:
+        return self.__page
 
+    @override
+    def reset(self) -> None:
+        super().reset()
+
+        self.__page = Page()
+        self.__path: list[str] = []
+
+
+def _scrape_html(html: str) -> Page:
+    html_parser = _HtmlParser()
     html_parser.feed(html)
 
-    return page
+    return html_parser.page
 
 
 async def scrape_page(
