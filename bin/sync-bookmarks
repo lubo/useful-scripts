@@ -11,7 +11,10 @@ __bookmarkmgr() {
 		raindrop_api_key="$(pass "${RAINDROP_API_KEY_PASS_PATH}")"
 	fi
 
-	if ! bookmarkmgr "$@" <<<"${raindrop_api_key}"; then
+	if ! bookmarkmgr \
+		--raindrop-api-key-file <(echo "${raindrop_api_key}") \
+		"$@" \
+		; then
 		error=true
 	fi
 }

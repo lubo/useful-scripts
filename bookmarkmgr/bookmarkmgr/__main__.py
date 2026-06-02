@@ -3,9 +3,8 @@
 import argparse
 import asyncio
 import contextlib
-from getpass import getpass
 import logging
-import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from . import DEBUG
@@ -21,6 +20,16 @@ if TYPE_CHECKING:
 
 _HOST_RATE_LIMIT_METAVAR = ("hostname", "limit", "period", "jitter")
 _HOST_RATE_LIMIT_NARGS = len(_HOST_RATE_LIMIT_METAVAR)
+
+
+def _existing_file_path(str_path: str) -> Path:
+    path = Path(str_path)
+
+    try:
+        with path.open():
+            return path
+    except OSError as error:
+        raise argparse.ArgumentTypeError(error) from error
 
 
 def _host_rate_limits_parser() -> Callable[[str], float | int | str]:
@@ -69,6 +78,13 @@ def _main() -> None:
     )
 
     arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument(
+        "--raindrop-api-key-file",
+        help="File containing the Raindrop API key",
+        required=True,
+        type=_existing_file_path,
+    )
+
     subparsers = arg_parser.add_subparsers(dest="command", required=True)
 
     export_collection_parser = subparsers.add_parser(
@@ -118,7 +134,8 @@ def _main() -> None:
 
     args = arg_parser.parse_args()
 
-    api_key = getpass("Raindrop API Key: ") if sys.stdin.isatty() else input()
+    with args.raindrop_api_key_file.open() as f:
+        api_key = f.read().strip()
 
     asyncio.run(run_command(args, api_key))
 
