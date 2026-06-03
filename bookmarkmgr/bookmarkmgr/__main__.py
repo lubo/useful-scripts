@@ -57,9 +57,13 @@ async def run_command(args: argparse.Namespace, raindrop_api_key: str) -> None:
             case "export-collection":
                 await export_collection(raindrop_client, args.collection_id)
             case "maintain-collection":
+                with args.imgbb_api_key_file.open() as f:
+                    imgbb_api_key = f.read().strip()
+
                 await maintain_collection(
                     raindrop_client,
                     args.collection_id,
+                    imgbb_api_key,
                     MaintainCollectionOptions(
                         args.host_rate_limits,
                         args.no_archive,
@@ -115,6 +119,12 @@ def _main() -> None:
         metavar=_HOST_RATE_LIMIT_METAVAR,
         nargs=_HOST_RATE_LIMIT_NARGS,
         type=_host_rate_limits_parser(),
+    )
+    maintain_collection_parser.add_argument(
+        "--imgbb-api-key-file",
+        help="File containing the ImgBB API key",
+        required=True,
+        type=_existing_file_path,
     )
     maintain_collection_parser.add_argument(
         "--no-archive",
