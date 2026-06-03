@@ -51,7 +51,7 @@ description = ""
 authors = []
 
 [tool.poetry.dependencies]
-aiohttp = "^3.13.5"
+aiohttp = "^3.14.0"
 aiohttp-retry = "^2.9.1"
 cffi = "^2.0.0"
 overrides = "^7.7.0"
