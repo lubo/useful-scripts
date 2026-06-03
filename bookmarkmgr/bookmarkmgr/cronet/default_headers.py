@@ -3,7 +3,7 @@
 DEFAULT_HEADERS = (
     (
         "sec-ch-ua",
-        '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+        '"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"',
     ),
     ("sec-ch-ua-mobile", "?0"),
     ("sec-ch-ua-platform", '"Linux"'),
@@ -11,7 +11,7 @@ DEFAULT_HEADERS = (
     ("Upgrade-Insecure-Requests", "1"),
     (
         "User-Agent",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
     ),
     (
         "Accept",
@@ -22,5 +22,5 @@ DEFAULT_HEADERS = (
     ("Sec-Fetch-User", "?1"),
     ("Sec-Fetch-Dest", "document"),
     ("Accept-Encoding", "gzip, deflate, br, zstd"),
-    ("Accept-Language", "en-US,en;q=0.9"),
+    ("Accept-Language", "en-SK,en;q=0.9"),
 )
