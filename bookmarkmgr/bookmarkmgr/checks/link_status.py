@@ -57,17 +57,11 @@ class LinkStatus(IntEnum):
 def check_link_status(
     scraper_result: scraper.Result,
 ) -> tuple[LinkStatus, None | str]:
-    link_status = LinkStatus.OK
-    error = None
-
     if isinstance(scraper_result, RequestError):
-        link_status = LinkStatus.POSSIBLY_BROKEN
-        error = str(scraper_result)
-
-        return link_status, error
+        return LinkStatus.POSSIBLY_BROKEN, str(scraper_result)
 
     match scraper_result.response.status_code:
-        case HTTPStatus.OK.value:
+        case HTTPStatus.OK:
             if scraper_result.page is None:
                 message = "Page is None"
                 raise ValueError(message)
@@ -76,9 +70,9 @@ def check_link_status(
                 "Page Not Found",
                 "Video deleted",
             ]:
-                link_status = LinkStatus.BROKEN
-                error = scraper_result.page.title
-            elif (
+                return LinkStatus.BROKEN, scraper_result.page.title
+
+            if (
                 match := re.fullmatch(
                     r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
                     scraper_result.page.title,
@@ -88,18 +82,13 @@ def check_link_status(
                     scraper_result.page.title,
                 )
             ) is not None:
-                link_status = LinkStatus.BROKEN
-                error = match.group(1)
-        case HTTPStatus.UNAUTHORIZED.value | HTTPStatus.FORBIDDEN.value:
+                return LinkStatus.BROKEN, match.group(1)
+
+            return LinkStatus.OK, None
+        case HTTPStatus.UNAUTHORIZED | HTTPStatus.FORBIDDEN:
             link_status = LinkStatus.BLOCKED
         case _:
-            pass
-
-    if error is not None or (
-        scraper_result.response.ok
-        and scraper_result.response.status_code not in REDIRECT_STATUS_CODES
-    ):
-        return link_status, error
+            link_status = LinkStatus.POSSIBLY_BROKEN
 
     error = "{} {}".format(  # noqa: UP032
         scraper_result.response.status_code,
@@ -107,11 +96,6 @@ def check_link_status(
     )
     if scraper_result.response.redirect_url is not None:
         error += f" → {scraper_result.response.redirect_url}"
-
-    if link_status != LinkStatus.OK:
-        return link_status, error
-
-    link_status = LinkStatus.POSSIBLY_BROKEN
 
     return link_status, error
 
