@@ -1,0 +1,4 @@
+paths:
+  .github/workflows/*.yml:
+    ignore:
+      - ubuntu-26.04 # https://github.com/rhysd/actionlint/issues/682
