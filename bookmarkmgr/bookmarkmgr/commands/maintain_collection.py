@@ -4,6 +4,8 @@ from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
+from http import HTTPStatus
+from io import BytesIO
 from typing import cast, NoReturn, TYPE_CHECKING
 import urllib.parse
 
@@ -23,7 +25,7 @@ from bookmarkmgr.checks.link_status import (
     get_fixed_url,
     LinkStatus,
 )
-from bookmarkmgr.clients import imgbb
+from bookmarkmgr.clients import imgpile
 from bookmarkmgr.clients.archive_today import (
     ArchiveTodayClient,
     ArchiveTodayError,
@@ -281,18 +283,19 @@ async def scrape_and_check(
 
 
 async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913, PLR0915
-    result_awaitable: Awaitable[
-        tuple[scraper.Page | None, LinkStatus, str | None, str | None]
-    ],
+    check_session: cronet.RetrySession,
     raindrop: RaindropIn,
     metadata: Metadata,
-    imgbb_client: imgbb.Client,
+    imgpile_client: imgpile.Client,
     archival_tasks: list[asyncio.Task[None]],
     create_archival_tasks: Callable[[asyncio.TaskGroup], object],
 ) -> None:
-    page, link_status, error, fixed_url = await result_awaitable
-    now = datetime.now(tz=UTC)
     url = raindrop["link"]
+    page, link_status, error, fixed_url = await scrape_and_check(
+        check_session,
+        url,
+    )
+    now = datetime.now(tz=UTC)
 
     metadata["Last check"] = str(now)
 
@@ -397,8 +400,9 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913, PLR0
         if cover_candidates:
             _: asyncio.Task[None] = task_group.create_task(
                 mirror_raindrop_cover(
+                    check_session,
                     raindrop,
-                    imgbb_client,
+                    imgpile_client,
                     cover_candidates,
                 ),
                 name=f"Mirror-Cover-{url}",
@@ -406,24 +410,40 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913, PLR0
 
 
 async def mirror_raindrop_cover(
+    check_session: cronet.RetrySession,
     raindrop: RaindropIn,
-    imgbb_client: imgbb.Client,
+    imgpile_client: imgpile.Client,
     candidate_urls: list[str],
 ) -> None:
-    result: imgbb.UploadResult | aiohttp.ClientError
+    result: (
+        imgpile.MediaUploadResult | aiohttp.ClientError | cronet.RequestError
+    )
 
     for url in candidate_urls:
         try:
-            result = await imgbb_client.upload_url(url)
-        except aiohttp.ClientError as exc:
+            # ruff: disable[FIX002, TD002, TD003]
+            image_response = await check_session.get(
+                url,
+                # TODO: Remove when redirects are supported.
+                allow_redirects=False,
+            )
+            # ruff: enable[FIX002, TD002, TD003]
+
+            if image_response.status_code != HTTPStatus.OK:
+                continue
+
+            result = await imgpile_client.media_upload(
+                BytesIO(image_response.content),
+            )
+        except (aiohttp.ClientError, cronet.RequestError) as exc:
             result = exc
 
         match result:
             case Success(response):
                 # Mypy currently doesn't support type narrowing here.
-                response = cast("imgbb.SuccessResponse", response)
+                response = cast("imgpile.MediaCreatedResponse", response)
 
-                raindrop["cover"] = response["data"]["url"]
+                raindrop["cover"] = response["media"]["urls"]["original"]
                 raindrop["tags"] = [*raindrop["tags"], "cover-mirrored"]
 
                 logger.info(
@@ -433,21 +453,9 @@ async def mirror_raindrop_cover(
 
                 return
             case _:
-                error: imgbb.ErrorResponseError | aiohttp.ClientError
-
                 match result:
                     case Failure(response):
-                        # Mypy currently doesn't support type narrowing here.
-                        response = cast("imgbb.ErrorResponse", response)
-
-                        if response["error"]["code"] in (
-                            imgbb.ErrorCodes.CANT_DOWNLOAD_REMOTE_IMAGE,
-                            imgbb.ErrorCodes.FORBIDDEN,
-                            imgbb.ErrorCodes.UNSUPPORTED_OR_UNRECOGNIZED_FILE_FORMAT,
-                        ):
-                            continue
-
-                        error = response["error"]
+                        error = response
                     case _:
                         error = result
 
@@ -484,7 +492,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     raindrop_with_defauls: TypedDefaultsDict[RaindropIn, RaindropOut],
     note_metadata: Metadata,
     at_client: ArchiveTodayClient,
-    imgbb_client: imgbb.Client,
+    imgpile_client: imgpile.Client,
     wm_client: WaybackMachineClient,
     check_session: cronet.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
@@ -529,10 +537,10 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     ):
         _: asyncio.Task[None] = task_group.create_task(
             process_scrape_and_check_result(
-                scrape_and_check(check_session, link),
+                check_session,
                 raindrop,
                 note_metadata,
-                imgbb_client,
+                imgpile_client,
                 archival_tasks,
                 create_archival_tasks_partial,
             ),
@@ -562,7 +570,7 @@ async def maintain_raindrop(  # noqa: PLR0913
     raindrop_client: RaindropClient,
     raindrop: RaindropOut,
     at_client: ArchiveTodayClient,
-    imgbb_client: imgbb.Client,
+    imgpile_client: imgpile.Client,
     wm_client: WaybackMachineClient,
     check_session: cronet.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
@@ -581,7 +589,7 @@ async def maintain_raindrop(  # noqa: PLR0913
                 updated_raindrop_with_defauls,
                 note_metadata,
                 at_client,
-                imgbb_client,
+                imgpile_client,
                 wm_client,
                 check_session,
                 duplicate_checker,
@@ -616,7 +624,7 @@ async def maintain_raindrop(  # noqa: PLR0913
 async def maintain_collection(
     raindrop_client: RaindropClient,
     collection_id: int,
-    imbgg_api_key: str,
+    imgpile_api_key: str,
     user_options: MaintainCollectionOptions,
 ) -> None:
     items = raindrop_client.get_collection_items(collection_id)
@@ -629,7 +637,7 @@ async def maintain_collection(
             "Maintaining",
         ) as maintaining_progress_bar,
         ArchiveTodayClient() as at_client,
-        imgbb.Client(imbgg_api_key) as imgbb_client,
+        imgpile.Client(imgpile_api_key) as imgpile_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
             host_rate_limits=user_options.host_rate_limits,
@@ -654,7 +662,7 @@ async def maintain_collection(
                     raindrop_client,
                     item,
                     at_client,
-                    imgbb_client,
+                    imgpile_client,
                     wm_client,
                     check_session,
                     duplicate_checker,

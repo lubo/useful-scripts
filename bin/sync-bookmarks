@@ -36,13 +36,13 @@ commit_changes() {
 run_maintenance() {
 	echo "Running maintenance…"
 
-	local IMGBB_API_KEY
-	IMGBB_API_KEY=$(pass "${IMGBB_API_KEY_PASS_PATH}")
+	local IMGPILE_API_KEY
+	IMGPILE_API_KEY=$(pass "${IMGPILE_API_KEY_PASS_PATH}")
 
 	mapfile -t flags < <(xargs -n 1 <<<"${BOOKMARK_MAINTENANCE_FLAGS}")
 
 	__bookmarkmgr maintain-collection "${BOOKMARK_RAINDROP_COLLECTION}" \
-		--imgbb-api-key-file <(echo "${IMGBB_API_KEY}") \
+		--imgpile-api-key-file <(echo "${IMGPILE_API_KEY}") \
 		"${flags[@]}"
 }
 
@@ -63,7 +63,7 @@ main() {
 	: "${BOOKMARK_RAINDROP_COLLECTION:?}"
 	: "${BOOKMARK_DATABASE_PATH:?}"
 	: "${RAINDROP_API_KEY_PASS_PATH:?}"
-	: "${IMGBB_API_KEY_PASS_PATH:?}"
+	: "${IMGPILE_API_KEY_PASS_PATH:?}"
 
 	run_maintenance
 
