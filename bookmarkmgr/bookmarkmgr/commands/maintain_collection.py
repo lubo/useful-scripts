@@ -3,9 +3,13 @@ from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
+from http import HTTPStatus
+from io import BytesIO
 import re
 from typing import NoReturn, TYPE_CHECKING
+import urllib.parse
 
+import aiohttp
 from playwright.async_api import async_playwright
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -21,6 +25,7 @@ from bookmarkmgr.checks.link_status import (
     get_fixed_url,
     LinkStatus,
 )
+from bookmarkmgr.clients import imgpile
 from bookmarkmgr.clients.archive_today import (
     ArchiveTodayClient,
     ArchiveTodayError,
@@ -49,6 +54,7 @@ from bookmarkmgr.utils.link_metadata import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
+
 
 logger = get_logger()
 
@@ -277,16 +283,18 @@ async def scrape_and_check(
 
 
 async def process_scrape_and_check_result(  # noqa: C901, PLR0912
-    result_awaitable: Awaitable[
-        tuple[scraper.Page | None, LinkStatus, str | None, str | None]
-    ],
+    check_session: playwright.RetrySession,
     raindrop: RaindropIn,
     metadata: Metadata,
+    imgpile_client: imgpile.Client,
     create_archival_tasks: Callable[[asyncio.TaskGroup], object],
 ) -> None:
-    page, link_status, error, fixed_url = await result_awaitable
-    now = datetime.now(tz=UTC)
     url = raindrop["link"]
+    page, link_status, error, fixed_url = await scrape_and_check(
+        check_session,
+        url,
+    )
+    now = datetime.now(tz=UTC)
 
     metadata["Last check"] = str(now)
 
@@ -356,8 +364,121 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
             error,
         )
 
+    cover_candidates: list[str] = []
+    if (
+        "cover-mirrored" not in raindrop["tags"]
+        and "cover-mirroring-failed" not in raindrop["tags"]
+    ):
+        cover = raindrop["cover"]
+
+        if cover.startswith("https://i.ibb.co/") and raindrop["media"]:
+            cover_candidates += [
+                "https://rdl.ink/render/" + urllib.parse.quote(cover, safe=""),
+            ]
+            cover = raindrop["media"][0]["link"]
+
+        if cover and not cover.startswith("https://rdl.ink/render/"):
+            cover_candidates = [
+                cover,
+                "https://rdl.ink/render/" + urllib.parse.quote(cover, safe=""),
+                *cover_candidates,
+            ]
+
+        if page and page.og_image and page.og_image not in cover_candidates:
+            cover_candidates += [
+                page.og_image,
+            ]
+
+        # If the link is broken, we might wanna use the screenshot from AT or
+        # WM instead, as the preview image might be broken too.
+        if link_status == LinkStatus.OK:
+            cover_candidates += [
+                "https://rdl.ink/render/" + urllib.parse.quote(url, safe=""),
+            ]
+
     async with ForgivingTaskGroup() as task_group:
         create_archival_tasks(task_group)
+
+        if cover_candidates:
+            _: asyncio.Task[None] = task_group.create_task(
+                mirror_raindrop_cover(
+                    check_session,
+                    raindrop,
+                    imgpile_client,
+                    cover_candidates,
+                ),
+                name=f"Mirror-Cover-{url}",
+            )
+
+
+async def mirror_raindrop_cover(
+    check_session: playwright.RetrySession,
+    raindrop: RaindropIn,
+    imgpile_client: imgpile.Client,
+    candidate_urls: list[str],
+) -> None:
+    for url in candidate_urls:
+        try:
+            image_response = await check_session.get(url)
+
+            match image_response.status_code:
+                case HTTPStatus.OK:
+                    pass
+                case HTTPStatus.NOT_FOUND | HTTPStatus.GONE:
+                    continue
+                case HTTPStatus.INTERNAL_SERVER_ERROR if url.startswith(
+                    "https://rdl.ink/render/",
+                ):
+                    continue
+                case _:
+                    logger.error(
+                        "Downloading cover image failed: %s %s: %s: %s",
+                        image_response.status_code,
+                        image_response.reason,
+                        url,
+                        raindrop["link"],
+                    )
+                    return
+
+            result = await imgpile_client.upload(
+                BytesIO(image_response.content),
+            )
+        except (aiohttp.ClientError, playwright.RequestError) as exc:
+            result = exc
+
+        match result:
+            case Success(response):
+                raindrop["cover"] = response["data"]["urls"]["original"]
+                raindrop["tags"] = [*raindrop["tags"], "cover-mirrored"]
+
+                logger.info(
+                    "Cover image mirrored successfully: %s",
+                    raindrop["link"],
+                )
+
+                return
+            case _:
+                match result:
+                    case Failure(response):
+                        error = response
+                    case _:
+                        error = result
+
+                logger.error(
+                    "Failed to mirror cover image: %s: %s: %s",
+                    error,
+                    url,
+                    raindrop["link"],
+                )
+
+                return
+
+    raindrop["tags"] = [*raindrop["tags"], "cover-mirroring-failed"]
+
+    logger.error(
+        "Mirroring all cover images candidates failed: %s",
+        raindrop["link"],
+    )
 
 
 async def process_check_duplicate_result(
@@ -376,6 +497,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913, PLR0917
     raindrop_with_defauls: TypedDefaultsDict[RaindropIn, RaindropOut],
     note_metadata: Metadata,
     at_client: ArchiveTodayClient,
+    imgpile_client: imgpile.Client,
     wm_client: WaybackMachineClient,
     check_session: playwright.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
@@ -408,15 +530,20 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913, PLR0917
         )
         and (
             "blocked" in raindrop["tags"]
+            or (
+                "cover-mirrored" not in raindrop["tags"]
+                and "cover-mirroring-failed" not in raindrop["tags"]
+            )
             or "possibly-broken" in raindrop["tags"]
             or datetime.now(tz=UTC) > last_check + timedelta(days=1)
         )
     ):
         _: asyncio.Task[None] = task_group.create_task(
             process_scrape_and_check_result(
-                scrape_and_check(check_session, link),
+                check_session,
                 raindrop,
                 note_metadata,
+                imgpile_client,
                 create_archival_tasks_partial,
             ),
             name=f"Scrape-And-Check-{link}",
@@ -447,6 +574,7 @@ async def maintain_raindrop(  # noqa: PLR0913, PLR0917
     raindrop_client: RaindropClient,
     raindrop: RaindropOut,
     at_client: ArchiveTodayClient,
+    imgpile_client: imgpile.Client,
     wm_client: WaybackMachineClient,
     check_session: playwright.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
@@ -465,6 +593,7 @@ async def maintain_raindrop(  # noqa: PLR0913, PLR0917
                 updated_raindrop_with_defauls,
                 note_metadata,
                 at_client,
+                imgpile_client,
                 wm_client,
                 check_session,
                 duplicate_checker,
@@ -499,6 +628,7 @@ async def maintain_raindrop(  # noqa: PLR0913, PLR0917
 async def maintain_collection(
     raindrop_client: RaindropClient,
     collection_id: int,
+    imgpile_api_key: imgpile.ApiKey,
     user_options: MaintainCollectionOptions,
 ) -> None:
     items = raindrop_client.get_collection_items(collection_id)
@@ -513,6 +643,7 @@ async def maintain_collection(
         async_playwright() as playwright,
         BrowserManager(playwright) as browser_manager,
         ArchiveTodayClient(browser_manager.get_browser()) as at_client,
+        imgpile.Client(imgpile_api_key) as imgpile_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
             browser_manager.get_browser(),
@@ -538,6 +669,7 @@ async def maintain_collection(
                     raindrop_client,
                     item,
                     at_client,
+                    imgpile_client,
                     wm_client,
                     check_session,
                     duplicate_checker,

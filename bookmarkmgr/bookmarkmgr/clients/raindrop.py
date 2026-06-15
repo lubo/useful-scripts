@@ -13,11 +13,16 @@ if TYPE_CHECKING:
 RAINDROPS_PER_PAGE = 50
 
 
+class Medium(TypedDict):
+    link: str
+
+
 class BaseRaindrop(TypedDict):
     cover: str
     created: str
     excerpt: str
     link: str
+    media: list[Medium]
     note: str
     tags: list[str]
     title: str
