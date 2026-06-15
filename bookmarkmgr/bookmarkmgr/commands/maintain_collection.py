@@ -4,10 +4,15 @@ from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
+from http import HTTPStatus
+from io import BytesIO
 from typing import NoReturn, TYPE_CHECKING
+import urllib.parse
 
+import aiohttp
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
+from yarl import URL
 
 from bookmarkmgr import cronet, scraper
 from bookmarkmgr.asyncio import ForgivingTaskGroup
@@ -20,6 +25,7 @@ from bookmarkmgr.checks.link_status import (
     get_fixed_url,
     LinkStatus,
 )
+from bookmarkmgr.clients import imgpile
 from bookmarkmgr.clients.archive_today import (
     ArchiveTodayClient,
     ArchiveTodayError,
@@ -45,6 +51,7 @@ from bookmarkmgr.utils.link_metadata import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
+
 
 logger = get_logger()
 
@@ -273,18 +280,20 @@ async def scrape_and_check(
     return old_page, link_status, error, None
 
 
-async def process_scrape_and_check_result(  # noqa: C901, PLR0912
-    result_awaitable: Awaitable[
-        tuple[scraper.Page | None, LinkStatus, str | None, str | None]
-    ],
+async def process_scrape_and_check_result(  # noqa: C901, PLR0912, PLR0913, PLR0915
+    check_session: cronet.RetrySession,
     raindrop: RaindropIn,
     metadata: Metadata,
+    imgpile_client: imgpile.Client,
     archival_tasks: list[asyncio.Task[None]],
     create_archival_tasks: Callable[[asyncio.TaskGroup], object],
 ) -> None:
-    page, link_status, error, fixed_url = await result_awaitable
-    now = datetime.now(tz=UTC)
     url = raindrop["link"]
+    page, link_status, error, fixed_url = await scrape_and_check(
+        check_session,
+        url,
+    )
+    now = datetime.now(tz=UTC)
 
     metadata["Last check"] = str(now)
 
@@ -292,6 +301,8 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
         logger.info("Fixing URL to %s", fixed_url)
 
         raindrop["link"] = url = fixed_url
+
+    og_image = None
 
     if link_status == LinkStatus.OK:
         if page is None:
@@ -310,11 +321,8 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
                 metadata["Canonical URL"] = canonical_url
 
         # Raindrop sometimes fails to extract the cover image automatically.
-        if page.og_image and (
-            not raindrop["cover"]
-            or raindrop["cover"].startswith("https://rdl.ink/render/")
-        ):
-            raindrop["cover"] = page.og_image
+        if page.og_image:
+            og_image = page.og_image
 
     if link_status in BROKEN_LINK_STATUSES:
         try:
@@ -340,26 +348,123 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
             error,
         )
 
-    if fixed_url is None:
-        return
+    if fixed_url is not None:
+        for task in archival_tasks:
+            task.cancel()
 
-    for task in archival_tasks:
-        task.cancel()
+        for task in archival_tasks:
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
-    for task in archival_tasks:
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+        for key in [
+            "Archive (AT)",
+            "Archival Error (AT)",
+            "Archive (WM)",
+            "Archival Error (WM)",
+        ]:
+            metadata.pop(key, None)
 
-    for key in [
-        "Archive (AT)",
-        "Archival Error (AT)",
-        "Archive (WM)",
-        "Archival Error (WM)",
-    ]:
-        metadata.pop(key, None)
+    cover_candidates = []
+    if (
+        "cover-mirrored" not in raindrop["tags"]
+        and "cover-mirroring-failed" not in raindrop["tags"]
+    ):
+        if raindrop["cover"]:
+            cover_candidates += [
+                raindrop["cover"],
+                "https://rdl.ink/render/"
+                + urllib.parse.quote(raindrop["cover"], safe=""),
+            ]
+
+        if og_image:
+            og_image_url = URL(og_image)
+            if not og_image_url.host:
+                og_image_url = URL(url).join(og_image_url)
+            og_image_url = og_image_url.with_scheme("https")
+
+            cover_candidates += [
+                str(og_image_url),
+            ]
+
+        if not raindrop["cover"]:
+            cover_candidates += [
+                "https://rdl.ink/render/" + urllib.parse.quote(url, safe=""),
+            ]
 
     async with ForgivingTaskGroup() as task_group:
-        create_archival_tasks(task_group)
+        if fixed_url is not None:
+            create_archival_tasks(task_group)
+
+        if cover_candidates:
+            _: asyncio.Task[None] = task_group.create_task(
+                mirror_raindrop_cover(
+                    check_session,
+                    raindrop,
+                    imgpile_client,
+                    cover_candidates,
+                ),
+                name=f"Mirror-Cover-{url}",
+            )
+
+
+async def mirror_raindrop_cover(
+    check_session: cronet.RetrySession,
+    raindrop: RaindropIn,
+    imgpile_client: imgpile.Client,
+    candidate_urls: list[str],
+) -> None:
+    for url in candidate_urls:
+        try:
+            # ruff: disable[FIX002, TD002, TD003]
+            image_response = await check_session.get(
+                url,
+                # TODO: Remove when redirects are supported.
+                allow_redirects=False,
+            )
+            # ruff: enable[FIX002, TD002, TD003]
+
+            if image_response.status_code != HTTPStatus.OK:
+                continue
+
+            result = await imgpile_client.media_upload(
+                BytesIO(image_response.content),
+            )
+        except (aiohttp.ClientError, cronet.RequestError) as exc:
+            result = exc
+
+        match result:
+            case Success(response):
+                raindrop["cover"] = response["media"]["urls"]["original"]
+                raindrop["tags"] = [*raindrop["tags"], "cover-mirrored"]
+
+                logger.info(
+                    "Cover image mirrored successfully: %s",
+                    raindrop["link"],
+                )
+
+                return
+            case _:
+                match result:
+                    case Failure(response):
+                        error = response
+                    case _:
+                        error = result
+
+                logger.error(
+                    "Failed to mirror cover image: %s: %s: %s",
+                    error,
+                    url,
+                    raindrop["link"],
+                )
+
+                return
+
+    raindrop["tags"] = [*raindrop["tags"], "cover-mirroring-failed"]
+
+    logger.error(
+        "Mirroring all cover images candidates failed: %s",
+        raindrop["link"],
+    )
 
 
 async def process_check_duplicate_result(
@@ -378,6 +483,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
     raindrop_with_defauls: TypedDefaultsDict[RaindropIn, RaindropOut],
     note_metadata: Metadata,
     at_client: ArchiveTodayClient,
+    imgpile_client: imgpile.Client,
     wm_client: WaybackMachineClient,
     check_session: cronet.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
@@ -412,15 +518,20 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
         )
         and (
             "blocked" in raindrop["tags"]
+            or (
+                "cover-mirrored" not in raindrop["tags"]
+                and "cover-mirroring-failed" not in raindrop["tags"]
+            )
             or "possibly-broken" in raindrop["tags"]
             or datetime.now(tz=UTC) > last_check + timedelta(days=1)
         )
     ):
         _: asyncio.Task[None] = task_group.create_task(
             process_scrape_and_check_result(
-                scrape_and_check(check_session, link),
+                check_session,
                 raindrop,
                 note_metadata,
+                imgpile_client,
                 archival_tasks,
                 create_archival_tasks_partial,
             ),
@@ -450,6 +561,7 @@ async def maintain_raindrop(  # noqa: PLR0913
     raindrop_client: RaindropClient,
     raindrop: RaindropOut,
     at_client: ArchiveTodayClient,
+    imgpile_client: imgpile.Client,
     wm_client: WaybackMachineClient,
     check_session: cronet.RetrySession,
     duplicate_checker: DuplicateLinkChecker,
@@ -468,6 +580,7 @@ async def maintain_raindrop(  # noqa: PLR0913
                 updated_raindrop_with_defauls,
                 note_metadata,
                 at_client,
+                imgpile_client,
                 wm_client,
                 check_session,
                 duplicate_checker,
@@ -502,6 +615,7 @@ async def maintain_raindrop(  # noqa: PLR0913
 async def maintain_collection(
     raindrop_client: RaindropClient,
     collection_id: int,
+    imgpile_api_key: str,
     user_options: MaintainCollectionOptions,
 ) -> None:
     items = raindrop_client.get_collection_items(collection_id)
@@ -514,6 +628,7 @@ async def maintain_collection(
             "Maintaining",
         ) as maintaining_progress_bar,
         ArchiveTodayClient() as at_client,
+        imgpile.Client(imgpile_api_key) as imgpile_client,
         WaybackMachineClient() as wm_client,
         PerHostnameRateLimitedSession(
             host_rate_limits=user_options.host_rate_limits,
@@ -538,6 +653,7 @@ async def maintain_collection(
                     raindrop_client,
                     item,
                     at_client,
+                    imgpile_client,
                     wm_client,
                     check_session,
                     duplicate_checker,
