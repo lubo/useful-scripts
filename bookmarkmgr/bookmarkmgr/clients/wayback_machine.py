@@ -87,7 +87,7 @@ class WaybackMachineClient(
             "https://archive.org/wayback/available",
             params=request_paramaters,
         ) as response:
-            body: _AvailableResponse = await response.json()  # type: ignore[misc]
+            body: _AvailableResponse = await response.json()
 
         if (closest := body["archived_snapshots"].get("closest")) is not None:
             logger.info("Archival entry found for %s", url)
@@ -162,7 +162,7 @@ class WaybackMachineClient(
                 f"https://web.archive.org/save/status/{job_id}",
                 headers=request_headers,
             ) as response:
-                data = await response.json()  # type: ignore[misc]
+                data = await response.json()
 
             match data.get("status"):
                 case "pending":

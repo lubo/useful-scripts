@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
-@pytest_asyncio.fixture(  # type: ignore[misc]
+@pytest_asyncio.fixture(
     scope="session",
 )
 async def cronet_session() -> AsyncIterator[Session]:

@@ -20,7 +20,7 @@ class Error(Exception):
 
 class NotContextManagerError(RuntimeError):
     @override
-    def __init__(self, *args: object):
+    def __init__(self, *args: object) -> None:
         super().__init__(
             "This object must be used as a context manager",
             *args,

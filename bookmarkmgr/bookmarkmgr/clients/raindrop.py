@@ -143,7 +143,7 @@ class RaindropClient(
         ) as response:
             return cast(
                 "CollectionPage",
-                await response.json(),  # type: ignore[misc]
+                await response.json(),
             )
 
     async def update_raindrop(

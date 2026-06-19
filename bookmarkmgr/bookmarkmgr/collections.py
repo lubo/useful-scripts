@@ -1,10 +1,9 @@
 from collections import UserDict
 from collections.abc import Mapping
-from typing import cast, override
+from typing import cast
 
 
 class DefaultsDict[KT, VT](UserDict[KT, VT]):
-    @override
     def __init__(
         self,
         defaults: Mapping[KT, VT],
@@ -31,10 +30,9 @@ class TypedDefaultsDict[
 ](
     DefaultsDict[_TypedDict_KT, _TypedDict_VT],
 ):
-    data: Data_T  # type: ignore[assignment]
-    defaults: Defaults_T  # type: ignore[mutable-override]
+    data: Data_T  # type: ignore[bad-override-mutable-attribute]
+    defaults: Defaults_T  # type: ignore[bad-override-mutable-attribute]
 
-    @override
     def __init__(
         self,
         defaults: Defaults_T,

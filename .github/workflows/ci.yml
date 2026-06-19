@@ -66,8 +66,9 @@ jobs:
           VALIDATE_PYTHON_MYPY: ${{ matrix.component != 'bookmarkmgr' && '' }}
           VALIDATE_PYTHON_PYINK: false
           VALIDATE_PYTHON_PYLINT: false
-  mypy:
-    name: Mypy
+
+  pyrefly:
+    name: Pyrefly
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -94,4 +95,4 @@ jobs:
       #
       # Installing python3-pip-whl doesn't help.
       - run: poetry install --no-root
-      - run: poetry run mypy .
+      - run: poetry run pyrefly check

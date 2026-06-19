@@ -442,7 +442,6 @@ class RetrySession(Session):
 
 
 class RateLimitedSession(RetrySession):
-    @override
     def __init__(
         self,
         rate_limiter: RateLimiter,
@@ -478,7 +477,6 @@ class RateLimitedSession(RetrySession):
 
 
 class PerHostnameRateLimitedSession(RetrySession):
-    @override
     def __init__(
         self,
         *,

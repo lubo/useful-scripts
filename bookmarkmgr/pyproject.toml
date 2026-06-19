@@ -1,49 +1,3 @@
-[tool.mypy]
-check_untyped_defs = true
-disallow_any_decorated = true
-disallow_any_explicit = true
-disallow_any_expr = true
-disallow_any_generics = true
-disallow_any_unimported = true
-disallow_incomplete_defs = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_decorators = true
-disallow_untyped_defs = true
-enable_error_code = [
-    "deprecated",
-    "exhaustive-match",
-    "explicit-override",
-    "ignore-without-code",
-    "mutable-override",
-    "possibly-undefined",
-    "redundant-expr",
-    "redundant-self",
-    "truthy-bool",
-    "truthy-iterable",
-    "unimported-reveal",
-    "unused-awaitable",
-]
-explicit_package_bases = true
-extra_checks = true
-no_implicit_reexport = true
-python_executable = "${VIRTUAL_ENV}/bin/python"
-python_version = "3.14"
-strict = true
-strict_equality = true
-warn_redundant_casts = true
-warn_return_any = true
-warn_unreachable = true
-warn_unused_configs = true
-warn_unused_ignores = true
-
-[[tool.mypy.overrides]]
-module = [
-    "bookmarkmgr.__main__",
-    "bookmarkmgr.aiohttp",
-]
-disallow_any_expr = false
-
 [tool.poetry]
 name = "bookmarkmgr"
 version = "0.1.0"
@@ -61,7 +15,7 @@ tqdm = "^4.68.2"
 yarl = "^1.24.2"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^2.1.0"
+pyrefly = "^1.1.1"
 pytest = "^9.1.0"
 pytest-asyncio = "^1.4.0"
 types-tqdm = "^4.68.0.20260608"
@@ -72,6 +26,10 @@ script = "build.py"
 
 [tool.poetry.scripts]
 bookmarkmgr = "bookmarkmgr.__main__:main"
+
+[tool.pyrefly]
+python-version = "3.14"
+preset = "all"
 
 [tool.ruff]
 line-length = 79

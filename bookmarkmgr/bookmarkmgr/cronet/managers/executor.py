@@ -21,6 +21,8 @@ def _executor_execute(executor: Executor, runnable: Runnable) -> None:
 
 
 class ExecutorManager:
+    _processing_allowed: bool
+
     def __init__(self) -> None:
         self._handle = ffi.new_handle(self)
         self._queue: Queue[Runnable | None] = Queue()

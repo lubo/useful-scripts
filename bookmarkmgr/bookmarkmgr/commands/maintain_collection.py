@@ -44,7 +44,7 @@ from bookmarkmgr.utils.link_metadata import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable
+    from collections.abc import AsyncGenerator, Awaitable, Callable
 
 logger = get_logger()
 
@@ -71,7 +71,7 @@ class MaintainCollectionOptions:
 @asynccontextmanager
 async def as_async[T](
     context_manager: AbstractContextManager[T],
-) -> AsyncIterator[T]:
+) -> AsyncGenerator[T]:
     with context_manager as value:
         yield value
 
@@ -81,7 +81,7 @@ async def get_progress_bar(
     description: str,
     *,
     leave: bool = True,
-) -> AsyncIterator[tqdm[NoReturn]]:
+) -> AsyncGenerator[tqdm[NoReturn]]:
     stop_refreshing = False
 
     with tqdm(
@@ -119,8 +119,6 @@ async def process_archival_result(
     service_initials: str,
     service_name: str,
 ) -> None:
-    result: Result[str, str] | ArchiveTodayError | WaybackMachineError
-
     try:
         result = await result_awaitable
     except (ArchiveTodayError, WaybackMachineError) as e:

@@ -199,6 +199,9 @@ def _on_request_canceled(
 
 
 class RequestCallbackManager:
+    _error: Exception | None
+    _response: Response | None
+
     def __init__(
         self,
         request_parameters: RequestParameters,
@@ -225,8 +228,8 @@ class RequestCallbackManager:
 
         self._is_done.clear()
 
-        self._error: Exception | None = None
-        self._response: Response | None = None
+        self._error = None
+        self._response = None
 
         return self
 

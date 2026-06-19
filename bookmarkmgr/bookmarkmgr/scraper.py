@@ -42,6 +42,9 @@ type Result = RequestError | ScrapedData
 
 
 class _HtmlParser(HTMLParser):
+    __page: Page
+    __path: list[str]
+
     def handle_selfclosingtag(
         self,
         tag: str,
@@ -121,7 +124,7 @@ class _HtmlParser(HTMLParser):
         super().reset()
 
         self.__page = Page()
-        self.__path: list[str] = []
+        self.__path = []
 
 
 def _scrape_html(html: str) -> Page:

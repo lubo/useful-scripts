@@ -41,7 +41,7 @@ class Response(ResponseStatus):
         return self.headers
 
     def json(self) -> Any:  # type: ignore[explicit-any]
-        return json.loads(  # type: ignore[misc]
+        return json.loads(
             self.text,
         )
 

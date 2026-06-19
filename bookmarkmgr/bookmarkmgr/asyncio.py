@@ -19,11 +19,11 @@ class ForgivingTaskGroup(TaskGroup):
 
     _parent_cancel_requested: bool
 
-    @runtime_override  # type: ignore[misc]
+    @runtime_override
     def _is_base_error(self, exc: BaseException) -> bool:
         return cast(
             "bool",
-            super()._is_base_error(exc),  # type: ignore[misc]
+            super()._is_base_error(exc),  # type: ignore[missing-attribute]
         )
 
     @override
@@ -58,7 +58,12 @@ class ForgivingTaskGroup(TaskGroup):
 # https://github.com/ArtyomKozyrev8/BucketRateLimiter provide inadequate
 # performance. See https://github.com/mjpieters/aiolimiter/issues/73.
 class RateLimiter:
-    def __init__(self, limit: int, period: float = 60, jitter: float = 0):
+    def __init__(
+        self,
+        limit: int,
+        period: float = 60,
+        jitter: float = 0,
+    ) -> None:
         self.jitter = jitter
         self.period = period
 

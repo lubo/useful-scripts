@@ -27,6 +27,7 @@ class _HtmlParser(HTMLParser):
 
     @override
     def handle_data(self, data: str) -> None:
+        # type: ignore[no-matching-overload]
         self.__text = " ".join(filter(len, [self.__text, data.strip()]))
 
     @override

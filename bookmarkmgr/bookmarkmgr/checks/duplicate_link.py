@@ -113,7 +113,7 @@ def get_canonical_url(page: scraper.Page, url: str) -> str | None:
     if not canonical_url:
         return None
 
-    parsed_canonical_url = urlsplit(canonical_url)
+    parsed_canonical_url = urlsplit(canonical_url)  # type: ignore[no-matching-overload]
     parsed_url = urlsplit(url)
 
     canonical_url_qp = parse_qsl(parsed_canonical_url.query)

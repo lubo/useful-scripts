@@ -2,11 +2,11 @@ from contextlib import asynccontextmanager, contextmanager
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Iterator
+    from collections.abc import AsyncGenerator, Callable, Generator
 
 
 @contextmanager
-def destroying[T](obj: T, destroyer: Callable[[T], object]) -> Iterator[T]:
+def destroying[T](obj: T, destroyer: Callable[[T], object]) -> Generator[T]:
     try:
         yield obj
     finally:
@@ -17,6 +17,6 @@ def destroying[T](obj: T, destroyer: Callable[[T], object]) -> Iterator[T]:
 async def adestroying[T](
     obj: T,
     destroyer: Callable[[T], object],
-) -> AsyncIterator[T]:
+) -> AsyncGenerator[T]:
     with destroying(obj, destroyer) as d:
         yield d

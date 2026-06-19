@@ -114,13 +114,13 @@ class _ClientSessionOptions(TypedDict, total=False):
     base_url: StrOrURL
     connector: BaseConnector
     loop: asyncio.AbstractEventLoop
-    cookies: LooseCookies
+    cookies: LooseCookies  # type: ignore[explicit-any]
     headers: LooseHeaders
     proxy: StrOrURL
     proxy_auth: BasicAuth
     skip_auto_headers: Iterable[str]
     auth: BasicAuth
-    json_serialize: JSONEncoder
+    json_serialize: JSONEncoder  # type: ignore[explicit-any]
     request_class: type[ClientRequest]
     response_class: type[ClientResponse]
     ws_response_class: type[ClientWebSocketResponse]
@@ -145,7 +145,7 @@ class _ClientSessionOptions(TypedDict, total=False):
 
 
 class _InternalRequestOptions(_RequestOptions, total=False):
-    timeout: ClientTimeout | _SENTINEL  # type: ignore[misc]
+    timeout: ClientTimeout | _SENTINEL  # type: ignore[bad-override-mutable-attribute]
     verify_ssl: bool | None
     fingerprint: bytes | None
     ssl_context: SSLContext | None
@@ -154,7 +154,6 @@ class _InternalRequestOptions(_RequestOptions, total=False):
 class ClientSession(aiohttp.ClientSession):
     """Disables redirects by default to prevent protocol downgrades, etc."""
 
-    @override
     def __init__(
         self,
         **kwargs: Unpack[_ClientSessionOptions],
@@ -182,95 +181,94 @@ class ClientSession(aiohttp.ClientSession):
     def request(
         self,
         method: str,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().request(
             method,
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def get(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().get(
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def options(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().options(
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def head(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().head(
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def post(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().post(
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def put(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().put(
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def patch(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().patch(
-            str_or_url,
+            url,
             **kwargs,
         )
 
     @override
     def delete(
         self,
-        str_or_url: StrOrURL,
+        url: StrOrURL,
         **kwargs: Unpack[_RequestOptions],
     ) -> _RequestContextManager:
         return super().delete(
-            str_or_url,
+            url,
             **kwargs,
         )
 
 
 class RateLimitedClientSession(ClientSession):
-    @override
     def __init__(
         self,
         rate_limiter: RateLimiter,
@@ -310,7 +308,6 @@ class _ExponentialRetryOptions(TypedDict, total=False):
 
 
 class RateLimitRetry(ExponentialRetry):
-    @override
     def __init__(
         self,
         rate_limit_timeout: float,
@@ -341,11 +338,10 @@ class _RetryClientOptions(TypedDict, total=False):
 
 class _RetryClientRequestOptions(_RequestOptions, total=False):
     retry_options: RetryOptionsBase
-    raise_for_status: bool  # type: ignore[misc]
+    raise_for_status: bool  # type: ignore[bad-override-mutable-attribute]
 
 
 class RetryClientSession(RetryClient):
-    @override
     def __init__(
         self,
         client_session: ClientSession,
@@ -357,7 +353,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def request(  # type: ignore[override]
+    def request(  # type: ignore[bad-override]
         self,
         method: str,
         url: StrOrURL,
@@ -370,7 +366,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def get(  # type: ignore[override]
+    def get(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
@@ -381,7 +377,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def options(  # type: ignore[override]
+    def options(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
@@ -392,7 +388,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def head(  # type: ignore[override]
+    def head(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
@@ -403,7 +399,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def post(  # type: ignore[override]
+    def post(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
@@ -414,7 +410,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def put(  # type: ignore[override]
+    def put(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
@@ -425,7 +421,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def patch(  # type: ignore[override]
+    def patch(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
@@ -436,7 +432,7 @@ class RetryClientSession(RetryClient):
         )
 
     @override
-    def delete(  # type: ignore[override]
+    def delete(  # type: ignore[bad-override]
         self,
         url: _URL_TYPE,
         **kwargs: Unpack[_RetryClientRequestOptions],
