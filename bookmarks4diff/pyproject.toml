@@ -1,22 +1,25 @@
-[tool.mypy]
-ignore_errors = true
-
-[tool.poetry]
+[project]
 name = "bookmarks4diff"
 version = "0.1.0"
 description = ""
 authors = []
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml>=6.0.3",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-pyyaml = "^6.0.3"
+[project.scripts]
+bookmarks4diff = "bookmarks4diff.__main__:main"
+
+[tool.mypy]
+ignore_errors = true
+
+[tool.poetry]
+requires-poetry = ">=2"
 
 [tool.ruff]
 line-length = 79
 target-version = "py312"
-
-[tool.poetry.scripts]
-bookmarks4diff = "bookmarks4diff.__main__:main"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -32,5 +35,5 @@ force-sort-within-sections = true
 order-by-type = false
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2"]
 build-backend = "poetry.core.masonry.api"
