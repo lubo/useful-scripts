@@ -1,7 +1,7 @@
 [dependency-groups]
 dev = [
     "pyrefly>=1.1.1",
-    "pytest>=9.1.0",
+    "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "types-tqdm>=4.68.0.20260608",
 ]
@@ -18,7 +18,7 @@ dependencies = [
     "cffi>=2.0.0",
     "overrides>=7.7.0",
     "tld>=0.13",
-    "tqdm>=4.68.2",
+    "tqdm>=4.68.3",
     "yarl>=1.24.2",
 ]
 
