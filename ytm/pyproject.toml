@@ -6,7 +6,7 @@ authors = []
 requires-python = ">=3.12"
 dependencies = [
     "playwright>=1.61.0",
-    "yt-dlp>=2026.6.9",
+    "yt-dlp>=2026.7.4",
     "ytmusicapi>=1.12.1",
 ]
 
