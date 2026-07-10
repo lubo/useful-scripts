@@ -1,0 +1,18 @@
+#!/usr/bin/env expect
+
+set command [lindex $argv 0]
+
+trap {
+	global spawn_out
+	set rows [stty rows]
+	set cols [stty columns]
+	stty rows $rows columns $cols < $spawn_out(slave,name)
+} WINCH
+
+spawn -noecho "$env(SHELL)" -i
+
+stty -echo < $spawn_out(slave,name)
+send "$command\n"
+stty echo < $spawn_out(slave,name)
+
+interact
