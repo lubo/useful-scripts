@@ -6,6 +6,21 @@
 
 set -eo pipefail
 
+TARGET_USER="$1"
+
+if [[ ! "${TARGET_USER}" ]] ||
+	! grep -Fqw "${TARGET_USER}" <<<"${WORK_UNDER_ALLOWED_USERS}"; then
+	BASENAME="$(basename "$0")"
+
+	cat <<-EOF
+		usage: ${BASENAME} USER
+
+		Allowed users are: ${WORK_UNDER_ALLOWED_USERS}
+	EOF
+
+	exit 1
+fi
+
 PRESERVED_ENV=(
 	WAYLAND_DISPLAY
 	WORK_UNDER_ALLOWED_USERS
@@ -13,58 +28,39 @@ PRESERVED_ENV=(
 	XDG_SESSION_TYPE
 )
 
-main() {
-	TARGET_USER="$1"
+if [[ "${UID}" != 0 ]]; then
+	exec sudo \
+		--preserve-env="$(
+			IFS=,
+			echo "${PRESERVED_ENV[*]}"
+		)" \
+		"$0" "$@"
+fi
 
-	if [[ ! "${TARGET_USER}" ]] ||
-		! grep -Fqw "${TARGET_USER}" <<<"${WORK_UNDER_ALLOWED_USERS}"; then
-		BASENAME="$(basename "$0")"
+: "${WAYLAND_DISPLAY:?}"
+: "${XDG_RUNTIME_DIR:?}"
+: "${XDG_SESSION_TYPE:?}"
 
-		cat <<-EOF
-			usage: ${BASENAME} USER
+TARGET_UID="$(id -u "${TARGET_USER}")"
+TARGET_RUNTIME_DIR="/run/user/${TARGET_UID}"
 
-			Allowed users are: ${WORK_UNDER_ALLOWED_USERS}
-		EOF
+# Makes the target runtime directory available.
+systemctl start "user@${TARGET_UID}.service"
 
-		exit 1
-	fi
+# https://wiki.gentoo.org/wiki/Wayland#Running_Wayland_or_X11_applications_as_a_different_user
+setfacl -m "u:${TARGET_USER}:rw" \
+	"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
+setfacl -m "u:${TARGET_USER}:r" \
+	"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}.lock"
+touch "${TARGET_RUNTIME_DIR}/${WAYLAND_DISPLAY}"{,.lock}
+systemd-mount -o bind -q -t none \
+	"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" \
+	"${TARGET_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
+systemd-mount -o bind -q -t none \
+	"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}.lock" \
+	"${TARGET_RUNTIME_DIR}/${WAYLAND_DISPLAY}.lock"
 
-	if [[ "${UID}" != 0 ]]; then
-		exec sudo \
-			--preserve-env="$(
-				IFS=,
-				echo "${PRESERVED_ENV[*]}"
-			)" \
-			"$0" "$@"
-	fi
-
-	: "${WAYLAND_DISPLAY:?}"
-	: "${XDG_RUNTIME_DIR:?}"
-	: "${XDG_SESSION_TYPE:?}"
-
-	TARGET_UID="$(id -u "${TARGET_USER}")"
-	TARGET_RUNTIME_DIR="/run/user/${TARGET_UID}"
-
-	# Makes the target runtime directory available.
-	systemctl start "user@${TARGET_UID}.service"
-
-	# https://wiki.gentoo.org/wiki/Wayland#Running_Wayland_or_X11_applications_as_a_different_user
-	setfacl -m "u:${TARGET_USER}:rw" \
-		"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
-	setfacl -m "u:${TARGET_USER}:r" \
-		"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}.lock"
-	touch "${TARGET_RUNTIME_DIR}/${WAYLAND_DISPLAY}"{,.lock}
-	systemd-mount -o bind -q -t none \
-		"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" \
-		"${TARGET_RUNTIME_DIR}/${WAYLAND_DISPLAY}"
-	systemd-mount -o bind -q -t none \
-		"${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}.lock" \
-		"${TARGET_RUNTIME_DIR}/${WAYLAND_DISPLAY}.lock"
-
-	machinectl shell -q \
-		-E WAYLAND_DISPLAY \
-		-E XDG_SESSION_TYPE \
-		--uid "${TARGET_USER}"
-}
-
-main "$@"
+machinectl shell -q \
+	-E WAYLAND_DISPLAY \
+	-E XDG_SESSION_TYPE \
+	--uid "${TARGET_USER}"
