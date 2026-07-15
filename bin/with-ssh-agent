@@ -72,6 +72,6 @@ fi
 PARENT_DIR=$(dirname "$0")
 RUN_IN_INTERACTIVE_SHELL=$(realpath "${PARENT_DIR}/../run-in-interactive-shell")
 # shellcheck disable=SC2016
-COMMAND='PS1="(ssh-agent) ${PS1}"'
+COMMAND=' PS1="(ssh-agent) ${PS1}"'
 
 exec "${RUN_IN_INTERACTIVE_SHELL}" "${COMMAND}"

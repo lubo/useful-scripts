@@ -7,6 +7,6 @@ set -e
 
 PARENT_DIR=$(dirname "$0")
 RUN_IN_INTERACTIVE_SHELL=$(realpath "${PARENT_DIR}/../run-in-interactive-shell")
-COMMAND=$(poetry env activate)
+COMMAND=" $(poetry env activate)"
 
 exec "${RUN_IN_INTERACTIVE_SHELL}" "${COMMAND}"
