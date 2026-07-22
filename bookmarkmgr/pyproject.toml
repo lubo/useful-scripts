@@ -3,7 +3,7 @@ dev = [
     "pyrefly>=1.1.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
-    "types-tqdm>=4.68.0.20260608",
+    "types-tqdm>=4.69.0.20260720",
 ]
 
 [project]
@@ -15,11 +15,11 @@ requires-python = ">=3.14"
 dependencies = [
     "aiohttp>=3.14.1",
     "aiohttp-retry>=2.9.1",
-    "cffi>=2.0.0",
+    "cffi>=2.1.0",
     "overrides>=7.7.0",
     "tld>=0.13",
-    "tqdm>=4.68.3",
-    "yarl>=1.24.2",
+    "tqdm>=4.69.0",
+    "yarl>=1.24.5",
 ]
 
 [project.scripts]
