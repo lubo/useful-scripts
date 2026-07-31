@@ -13,6 +13,23 @@ commit_changes() {
 		return
 	fi
 
+	git diff "${MUSIC_LIBRARY_DATABASE_PATH}"
+
+	echo
+
+	while true; do
+		read -p "Do you wanna continue? [Y/n] " -r
+
+		case "${REPLY}" in
+		[Yy] | "")
+			break
+			;;
+		[Nn])
+			exit
+			;;
+		esac
+	done
+
 	git add "${MUSIC_LIBRARY_DATABASE_PATH}"
 
 	git commit -m "Update database" >/dev/null
