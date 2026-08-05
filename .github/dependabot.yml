@@ -12,6 +12,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /bookmarkmgr
+    # jscpd:ignore-start
     schedule:
       interval: cron
       cronjob: 0 7 * * *
@@ -24,12 +25,14 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: bookmarkmgr
+    # jscpd:ignore-end
     cooldown:
       default-days: 2
     versioning-strategy: increase
 
   - package-ecosystem: pip
     directory: /bookmarkmgr
+    # jscpd:ignore-start
     schedule:
       interval: cron
       cronjob: 0 7 * * *
@@ -45,6 +48,7 @@ updates:
           - version-update:semver-major
     commit-message:
       prefix: bookmarkmgr
+    # jscpd:ignore-end
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
@@ -54,6 +58,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /bookmarks4diff
+    # jscpd:ignore-start
     schedule:
       interval: cron
       cronjob: 0 7 * * *
@@ -66,12 +71,14 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: bookmarks4diff
+    # jscpd:ignore-end
     cooldown:
       default-days: 2
     versioning-strategy: increase
 
   - package-ecosystem: pip
     directory: /bookmarks4diff
+    # jscpd:ignore-start
     schedule:
       interval: cron
       cronjob: 0 7 * * *
@@ -87,6 +94,7 @@ updates:
           - version-update:semver-major
     commit-message:
       prefix: bookmarks4diff
+    # jscpd:ignore-end
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
@@ -96,6 +104,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /ytm
+    # jscpd:ignore-start
     schedule:
       interval: cron
       cronjob: 0 7 * * *
@@ -108,6 +117,7 @@ updates:
           - version-update:semver-patch
     commit-message:
       prefix: ytm
+    # jscpd:ignore-end
     cooldown:
       default-days: 2
       exclude:
@@ -118,6 +128,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /ytm
+    # jscpd:ignore-start
     schedule:
       interval: cron
       cronjob: 0 7 * * *
@@ -133,6 +144,7 @@ updates:
           - version-update:semver-major
     commit-message:
       prefix: ytm
+    # jscpd:ignore-end
     # Makes it possible to have another config. for the same dir.
     # https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     target-branch: master
