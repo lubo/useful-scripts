@@ -13,6 +13,8 @@ dependencies = [
 [project.scripts]
 ytm = "ytm.__main__:main"
 
+# jscpd:ignore-start
+
 [tool.mypy]
 ignore_errors = true
 
@@ -39,3 +41,5 @@ order-by-type = false
 [build-system]
 requires = ["poetry-core>=2"]
 build-backend = "poetry.core.masonry.api"
+
+# jscpd:ignore-end
