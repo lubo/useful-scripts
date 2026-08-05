@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
-# ruff: noqa: PGH003
-# type: ignore
-
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from typing import override
 
 
-class RequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
+class RequestHandler(SimpleHTTPRequestHandler):
+    @override
+    def do_GET(self) -> None:
         self.send_response(HTTPStatus.OK.value)
         self.end_headers()
         self.wfile.write(b"<script>window.close()</script>")
@@ -27,7 +26,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             ),
         )
 
-    def log_message(self, *args, **kwargs):
+    @override
+    def log_message(self, *args: object, **kwargs: object) -> None:
         pass
 
 
