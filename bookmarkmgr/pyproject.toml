@@ -44,11 +44,15 @@ target-version = "py314"
 select = ["ALL"]
 ignore = [
     "ANN",
+    "CPY001",
     "D10",
     "D203",
     "D212",
     "S607",
     "TRY400",
+]
+external = [
+    "PLR0917", # Ruff >=0.16
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]

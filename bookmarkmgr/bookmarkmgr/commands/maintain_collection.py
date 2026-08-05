@@ -156,7 +156,7 @@ async def process_archival_result(
     raindrop["tags"] = [*raindrop["tags"], tag]
 
 
-def create_archival_tasks(  # noqa: PLR0913
+def create_archival_tasks(  # noqa: PLR0913, PLR0917
     task_group: asyncio.TaskGroup,
     raindrop: RaindropIn,
     note_metadata: Metadata,
@@ -373,7 +373,7 @@ async def process_check_duplicate_result(
     )
 
 
-def create_raindrop_maintenance_tasks(  # noqa: PLR0913
+def create_raindrop_maintenance_tasks(  # noqa: PLR0913, PLR0917
     task_group: asyncio.TaskGroup,
     raindrop_with_defauls: TypedDefaultsDict[RaindropIn, RaindropOut],
     note_metadata: Metadata,
@@ -446,7 +446,7 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913
         )
 
 
-async def maintain_raindrop(  # noqa: PLR0913
+async def maintain_raindrop(  # noqa: PLR0913, PLR0917
     raindrop_client: RaindropClient,
     raindrop: RaindropOut,
     at_client: ArchiveTodayClient,

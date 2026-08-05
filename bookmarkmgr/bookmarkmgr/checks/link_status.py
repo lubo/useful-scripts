@@ -56,7 +56,7 @@ class LinkStatus(IntEnum):
 
 def check_link_status(
     scraper_result: scraper.Result,
-) -> tuple[LinkStatus, None | str]:
+) -> tuple[LinkStatus, str | None]:
     if isinstance(scraper_result, RequestError):
         return LinkStatus.POSSIBLY_BROKEN, str(scraper_result)
 
@@ -164,7 +164,7 @@ _URL_FIXERS: list[_FixerCallable] = [
 ]
 
 
-def get_fixed_url(response: scraper.Response, url: str) -> None | str:
+def get_fixed_url(response: scraper.Response, url: str) -> str | None:
     if response.status_code in NOT_FOUND_STATUS_CODES:
         return _fix_url_trailing_slash(urlsplit(url)).geturl()
 
