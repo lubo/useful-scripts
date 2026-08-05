@@ -2,7 +2,7 @@ import asyncio
 from http import HTTPStatus
 from http.cookiejar import CookieJar
 from itertools import chain
-from typing import cast, override, Self, TYPE_CHECKING, TypedDict, Unpack
+from typing import override, Self, TYPE_CHECKING, TypedDict, Unpack
 
 from yarl import URL
 
@@ -24,7 +24,6 @@ from .utils import adestroying, destroying
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
-    from http.client import HTTPResponse
 
     from .types import Engine, StrOrURL
 
@@ -262,7 +261,9 @@ class Session:
                 raise
 
         self.cookie_jar.extract_cookies(
-            cast("HTTPResponse", response),
+            # Method signature requires `response` to be HTTPResponse while it
+            # only calls its info() method.
+            response,  # type: ignore[bad-argument-type]
             request_params,
         )
 

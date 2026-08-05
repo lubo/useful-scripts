@@ -185,6 +185,8 @@ class WaybackMachineClient(
                 case "success":
                     break
                 case _:
+                    data = cast("_UnknownStatusResponse", data)
+
                     if data.get("status_ext") in _IGNORED_ERRORS:
                         data = cast("_ErrorStatusResponse", data)
                         return Failure(data["message"])

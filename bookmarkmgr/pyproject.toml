@@ -1,6 +1,6 @@
 [dependency-groups]
 dev = [
-    "pyrefly>=1.1.1",
+    "pyrefly>=1.2.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "types-cffi (>=2.0.0.20260518,<3.0.0.0)",
@@ -36,6 +36,10 @@ script = "build.py"
 [tool.pyrefly]
 python-version = "3.14"
 preset = "all"
+
+[tool.pyrefly.errors]
+implicit-bool = "ignore"
+unused-call-result = "ignore"
 
 [tool.ruff]
 line-length = 79

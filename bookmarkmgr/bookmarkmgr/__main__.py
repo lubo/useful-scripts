@@ -135,7 +135,7 @@ def _main() -> None:
     args = arg_parser.parse_args()
 
     with args.raindrop_api_key_file.open() as f:
-        api_key = f.read().strip()
+        api_key: str = f.read().strip()
 
     asyncio.run(run_command(args, api_key))
 

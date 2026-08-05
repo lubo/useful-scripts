@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from email.message import Message
 from http import HTTPStatus
+from http.client import HTTPMessage
 import json
 from typing import Any
 from urllib.request import Request
@@ -31,13 +31,12 @@ class Response(ResponseStatus):
     reason: str
     charset: str = "utf-8"
     content: bytes = b""
-    headers: Message[str, str] = field(
-        # Lambda is necessary to appease the type checker.
-        default_factory=lambda: Message(),  # noqa: PLW0108
+    headers: HTTPMessage = field(
+        default_factory=HTTPMessage,
     )
     redirect_url: str | None = None
 
-    def info(self) -> Message:
+    def info(self) -> HTTPMessage:
         return self.headers
 
     def json(self) -> Any:  # type: ignore[explicit-any]
