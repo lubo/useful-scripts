@@ -3,10 +3,10 @@ from http import HTTPStatus
 import itertools
 import re
 from typing import cast, Protocol, TYPE_CHECKING
-from urllib.parse import quote, SplitResult, urlsplit
 
 import tld
 from tld import get_tld
+from yarl import URL
 
 from bookmarkmgr.cronet import RequestError
 
@@ -26,7 +26,7 @@ NOT_FOUND_STATUS_CODES = {
 }
 
 
-def _get_tld_result(url: SplitResult) -> tld.Result | None:
+def _get_tld_result(url: str) -> tld.Result | None:
     return cast(
         "tld.Result | None",
         get_tld(
@@ -100,30 +100,20 @@ def check_link_status(
     return link_status, error
 
 
-def _fix_url_quoting(
-    url: SplitResult,
-    **_: object,
-) -> SplitResult:
-    return url._replace(path=quote(url.path))
-
-
 def _fix_url_subdomain(
-    url: SplitResult,
-    redirect_url: SplitResult,
-) -> SplitResult:
+    url: URL,
+    redirect_url: URL,
+) -> URL:
     if (
-        url.hostname is None
-        or redirect_url.hostname is None
-        or url.hostname == redirect_url.hostname
-        or url.port != redirect_url.port
-        or url.username != redirect_url.username
-        or url.password != redirect_url.password
-        or url != redirect_url._replace(netloc=url.netloc)
+        url.host is None
+        or redirect_url.host is None
+        or url.host == redirect_url.host
+        or (fixed_url := url.with_host(redirect_url.host)) != redirect_url
     ):
         return url
 
-    original_domain = _get_tld_result(url)
-    redirect_domain = _get_tld_result(redirect_url)
+    original_domain = _get_tld_result(str(url))
+    redirect_domain = _get_tld_result(str(redirect_url))
 
     if (
         original_domain is None
@@ -134,31 +124,28 @@ def _fix_url_subdomain(
     ):
         return url
 
-    return url._replace(netloc=redirect_url.netloc)
+    return fixed_url
 
 
 def _fix_url_trailing_slash(
-    url: SplitResult,
+    url: URL,
     **_: object,
-) -> SplitResult:
-    return url._replace(
-        path=(
-            url.path.rstrip("/") if url.path.endswith("/") else f"{url.path}/"
-        ),
+) -> URL:
+    return url.with_path(
+        url.path.rstrip("/") if url.path.endswith("/") else f"{url.path}/",
     )
 
 
 class _FixerCallable(Protocol):
     def __call__(
         self,
-        url: SplitResult,
+        url: URL,
         *,
-        redirect_url: SplitResult,
-    ) -> SplitResult: ...
+        redirect_url: URL,
+    ) -> URL: ...
 
 
 _URL_FIXERS: list[_FixerCallable] = [
-    _fix_url_quoting,
     _fix_url_trailing_slash,
     _fix_url_subdomain,
 ]
@@ -166,7 +153,7 @@ _URL_FIXERS: list[_FixerCallable] = [
 
 def get_fixed_url(response: scraper.Response, url: str) -> str | None:
     if response.status_code in NOT_FOUND_STATUS_CODES:
-        return _fix_url_trailing_slash(urlsplit(url)).geturl()
+        return str(_fix_url_trailing_slash(URL(url)))
 
     if (
         response.redirect_url is None
@@ -174,8 +161,12 @@ def get_fixed_url(response: scraper.Response, url: str) -> str | None:
     ):
         return None
 
-    parsed_url = urlsplit(url)
-    parsed_redirect_url = urlsplit(response.redirect_url)
+    parsed_url = URL(url)
+    parsed_redirect_url = URL(response.redirect_url)
+
+    # Takes care of differences in URL encoding.
+    if parsed_url == parsed_redirect_url:
+        return response.redirect_url
 
     for length in range(1, len(_URL_FIXERS) + 1):
         for fixer_combination in itertools.combinations(_URL_FIXERS, length):
@@ -188,6 +179,6 @@ def get_fixed_url(response: scraper.Response, url: str) -> str | None:
                 )
 
             if fixed_parsed_url == parsed_redirect_url:
-                return fixed_parsed_url.geturl()
+                return response.redirect_url
 
     return None
