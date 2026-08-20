@@ -39,7 +39,7 @@ def _get_tld_result(url: SplitResult) -> tld.Result | None:
 
 def _remove_www_subdomain(domain: str) -> str:
     return re.sub(
-        r"^www\d*(\.|$)",
+        r"^(www|w{1,3}\d+)(\.|$)",
         "",
         domain,
         flags=re.IGNORECASE,
