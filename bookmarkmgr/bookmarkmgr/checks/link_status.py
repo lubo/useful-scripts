@@ -84,6 +84,12 @@ def check_link_status(
             ) is not None:
                 return LinkStatus.BROKEN, match.group(1)
 
+            if (
+                scraper_result.page.og_image
+                and URL(scraper_result.page.og_image).path == "/oglogo.png"
+            ):
+                return LinkStatus.BROKEN, "Video deleted"
+
             return LinkStatus.OK, None
         case HTTPStatus.UNAUTHORIZED | HTTPStatus.FORBIDDEN:
             link_status = LinkStatus.BLOCKED
