@@ -60,6 +60,13 @@ LINK_STATUS_TAGS = {
     LinkStatus.BLOCKED: "blocked",
 }
 
+INVALID_DESCRIPTION_PATTERN = re.compile(
+    (
+        r"Unfortunately, your browser does not support the latest technology "
+        r"used on \S+."
+    ),
+)
+
 INVALID_TITLE_PATTERN = re.compile(
     r"Please update your browser to use \S+ \| \S+",
 )
@@ -320,6 +327,13 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
             or raindrop["cover"].startswith("https://rdl.ink/render/")
         ):
             raindrop["cover"] = page.og_image
+
+        if (
+            page.description
+            and INVALID_DESCRIPTION_PATTERN.fullmatch(raindrop["excerpt"])
+            is not None
+        ):
+            raindrop["excerpt"] = page.description
 
         if (
             page.title

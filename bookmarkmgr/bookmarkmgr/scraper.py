@@ -21,6 +21,7 @@ class Page:
     body_text: str = ""
     canonical_url: str | None = None
     default_lang_url: str | None = None
+    description: str | None = None
     og_image: str | None = None
     og_url: str | None = None
     title: str = ""
@@ -45,7 +46,7 @@ class _HtmlParser(HTMLParser):
     __page: Page
     __path: list[str]
 
-    def handle_selfclosingtag(
+    def handle_selfclosingtag(  # noqa: PLR0912
         self,
         tag: str,
         attrs: list[tuple[str, str | None]],
@@ -71,6 +72,10 @@ class _HtmlParser(HTMLParser):
                     case _:
                         pass
             case "meta":
+                match attrs_dict.get("name"):
+                    case "description":
+                        self.__page.description = attrs_dict.get("content")
+
                 match attrs_dict.get("property"):
                     case "og:image":
                         self.__page.og_image = attrs_dict.get("content")
