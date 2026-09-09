@@ -4,6 +4,7 @@ from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
+import re
 from typing import NoReturn, TYPE_CHECKING
 
 from tqdm import tqdm
@@ -58,6 +59,10 @@ LINK_STATUS_TAGS = {
     LinkStatus.POSSIBLY_BROKEN: "possibly-broken",
     LinkStatus.BLOCKED: "blocked",
 }
+
+INVALID_TITLE_PATTERN = re.compile(
+    r"Please update your browser to use \S+ \| \S+",
+)
 
 
 @dataclass(frozen=True)
@@ -315,6 +320,12 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
             or raindrop["cover"].startswith("https://rdl.ink/render/")
         ):
             raindrop["cover"] = page.og_image
+
+        if (
+            page.title
+            and INVALID_TITLE_PATTERN.fullmatch(raindrop["title"]) is not None
+        ):
+            raindrop["title"] = page.title
 
     if link_status in BROKEN_LINK_STATUSES:
         try:

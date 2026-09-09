@@ -19,6 +19,7 @@ class BaseRaindrop(TypedDict):
     link: str
     note: str
     tags: list[str]
+    title: str
 
 
 class RaindropIn(BaseRaindrop, total=False):
