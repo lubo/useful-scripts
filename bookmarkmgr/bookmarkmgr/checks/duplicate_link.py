@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from bookmarkmgr import scraper
     from bookmarkmgr.clients.raindrop import RaindropOut
 
+_LEADING_DOUBLE_SLASH_PATTERN = re.compile(r"^//")
+
 
 class _Link:
     def __init__(self, raindrop: RaindropOut) -> None:
@@ -133,7 +135,7 @@ def get_canonical_url(page: scraper.Page, url: str) -> str | None:
             else parsed_canonical_url.netloc
         ),
         # pathlib nor os.path help with the leading double slash.
-        path=re.sub(r"^//", "/", parsed_canonical_url.path),
+        path=_LEADING_DOUBLE_SLASH_PATTERN.sub("/", parsed_canonical_url.path),
         query=urlencode(
             [param for param in canonical_url_qp if param in common_qp],
         ),

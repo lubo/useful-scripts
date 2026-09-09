@@ -25,6 +25,19 @@ NOT_FOUND_STATUS_CODES = {
     HTTPStatus.GONE.value,
 }
 
+_POST_NOT_FOUND_PATTERN = re.compile(
+    r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
+)
+
+_VIDEO_DISABLED_PATTERN = re.compile(
+    r"(Video Disabled) - [a-zA-Z.]{11}",
+)
+
+_WWW_SUBDOMAIN_PATTERN = re.compile(
+    r"^(www|w{1,3}\d+)(\.|$)",
+    re.IGNORECASE,
+)
+
 
 def _get_tld_result(url: str) -> tld.Result | None:
     return cast(
@@ -38,11 +51,9 @@ def _get_tld_result(url: str) -> tld.Result | None:
 
 
 def _remove_www_subdomain(domain: str) -> str:
-    return re.sub(
-        r"^(www|w{1,3}\d+)(\.|$)",
+    return _WWW_SUBDOMAIN_PATTERN.sub(
         "",
         domain,
-        flags=re.IGNORECASE,
     )
 
 
@@ -73,12 +84,10 @@ def check_link_status(
                 return LinkStatus.BROKEN, scraper_result.page.title
 
             if (
-                match := re.fullmatch(
-                    r"(Post Not Found) \[[0-9a-f]+\] - [a-zA-Z]{8}",
+                match := _POST_NOT_FOUND_PATTERN.fullmatch(
                     scraper_result.page.title,
                 )
-                or re.fullmatch(
-                    r"(Video Disabled) - [a-zA-Z.]{11}",
+                or _VIDEO_DISABLED_PATTERN.fullmatch(
                     scraper_result.page.title,
                 )
             ) is not None:

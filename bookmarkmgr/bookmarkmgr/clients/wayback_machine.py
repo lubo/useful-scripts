@@ -25,6 +25,8 @@ _IGNORED_ERRORS = {
     # "error:service-unavailable",  # noqa: ERA001
 }
 
+_JOB_ID_PATTERN = re.compile(r"spn2-[a-z0-9-]*")
+
 
 class WaybackMachineError(Exception):
     pass
@@ -118,10 +120,7 @@ class WaybackMachineClient(
                 params=request_paramaters,
             ) as response:
                 # https://github.com/internetarchive/wayback-machine-webextension/blob/edebc9aa49c138fd784f94a1f70e47e0eb583dd9/webextension/scripts/background.js#L132
-                job_id_match = re.search(
-                    r"spn2-[a-z0-9-]*",
-                    await response.text(),
-                )
+                job_id_match = _JOB_ID_PATTERN.search(await response.text())
         except ClientResponseError as error:
             if error.status != HTTPStatus.NOT_FOUND.value:
                 raise
