@@ -4,7 +4,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "types-cffi (>=2.1.0.20260827,<3.0.0.0)",
-    "types-tqdm>=4.70.0.20260827",
+    "types-tqdm>=4.70.0.20260906",
 ]
 
 [project]
