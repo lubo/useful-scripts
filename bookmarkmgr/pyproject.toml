@@ -1,6 +1,6 @@
 [dependency-groups]
 dev = [
-    "pyrefly>=1.2.0",
+    "pyrefly>=1.3.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "types-cffi (>=2.1.0.20260827,<3.0.0.0)",
@@ -39,6 +39,7 @@ preset = "all"
 
 [tool.pyrefly.errors]
 implicit-bool = "ignore"
+open-unpacking = "ignore" # Python >=3.15
 unused-call-result = "ignore"
 
 [tool.ruff]

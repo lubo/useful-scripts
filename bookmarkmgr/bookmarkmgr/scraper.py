@@ -75,6 +75,8 @@ class _HtmlParser(HTMLParser):
                 match attrs_dict.get("name"):
                     case "description":
                         self.__page.description = attrs_dict.get("content")
+                    case _:
+                        pass
 
                 match attrs_dict.get("property"):
                     case "og:image":

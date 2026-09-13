@@ -114,13 +114,13 @@ class _ClientSessionOptions(TypedDict, total=False):
     base_url: StrOrURL
     connector: BaseConnector
     loop: asyncio.AbstractEventLoop
-    cookies: LooseCookies  # type: ignore[explicit-any]
+    cookies: LooseCookies
     headers: LooseHeaders
     proxy: StrOrURL
     proxy_auth: BasicAuth
     skip_auto_headers: Iterable[str]
     auth: BasicAuth
-    json_serialize: JSONEncoder  # type: ignore[explicit-any]
+    json_serialize: JSONEncoder
     request_class: type[ClientRequest]
     response_class: type[ClientResponse]
     ws_response_class: type[ClientWebSocketResponse]
