@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 from contextlib import AbstractContextManager, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
@@ -175,7 +174,7 @@ def create_archival_tasks(  # noqa: PLR0913, PLR0917
     at_client: ArchiveTodayClient,
     wm_client: WaybackMachineClient,
     user_options: MaintainCollectionOptions,
-) -> list[asyncio.Task[None]]:
+) -> None:
     is_link_broken = (
         len(
             {"broken", "possibly-broken"}.intersection(raindrop["tags"]),
@@ -183,7 +182,6 @@ def create_archival_tasks(  # noqa: PLR0913, PLR0917
         > 0
     )
     link = raindrop["link"]
-    tasks = []
 
     if not (
         user_options.no_archive
@@ -191,17 +189,15 @@ def create_archival_tasks(  # noqa: PLR0913, PLR0917
         or note_metadata.get("Archive (AT)")
         or note_metadata.get("Archival Error (AT)")
     ):
-        tasks.append(
-            task_group.create_task(
-                process_archival_result(
-                    at_client.archive_page(link),
-                    raindrop,
-                    note_metadata,
-                    "AT",
-                    "archive.today",
-                ),
-                name=f"Archive-Today-{link}",
+        task_group.create_task(
+            process_archival_result(
+                at_client.archive_page(link),
+                raindrop,
+                note_metadata,
+                "AT",
+                "archive.today",
             ),
+            name=f"Archive-Today-{link}",
         )
 
     if not (
@@ -210,20 +206,16 @@ def create_archival_tasks(  # noqa: PLR0913, PLR0917
         or note_metadata.get("Archive (WM)")
         or note_metadata.get("Archival Error (WM)")
     ):
-        tasks.append(
-            task_group.create_task(
-                process_archival_result(
-                    wm_client.archive_page(link),
-                    raindrop,
-                    note_metadata,
-                    "WM",
-                    "Wayback Machine",
-                ),
-                name=f"Wayback-Machine-{link}",
+        task_group.create_task(
+            process_archival_result(
+                wm_client.archive_page(link),
+                raindrop,
+                note_metadata,
+                "WM",
+                "Wayback Machine",
             ),
+            name=f"Wayback-Machine-{link}",
         )
-
-    return tasks
 
 
 def add_or_remove_tag(
@@ -291,7 +283,6 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
     ],
     raindrop: RaindropIn,
     metadata: Metadata,
-    archival_tasks: list[asyncio.Task[None]],
     create_archival_tasks: Callable[[asyncio.TaskGroup], object],
 ) -> None:
     page, link_status, error, fixed_url = await result_awaitable
@@ -365,24 +356,6 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
             error,
         )
 
-    if fixed_url is None:
-        return
-
-    for task in archival_tasks:
-        task.cancel()
-
-    for task in archival_tasks:
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
-
-    for key in [
-        "Archive (AT)",
-        "Archival Error (AT)",
-        "Archive (WM)",
-        "Archival Error (WM)",
-    ]:
-        metadata.pop(key, None)
-
     async with ForgivingTaskGroup() as task_group:
         create_archival_tasks(task_group)
 
@@ -427,8 +400,6 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913, PLR0917
     except ValueError:
         last_check = datetime.fromtimestamp(0, tz=UTC)
 
-    archival_tasks = create_archival_tasks_partial(task_group)
-
     if (
         not user_options.no_checks
         and (
@@ -446,11 +417,12 @@ def create_raindrop_maintenance_tasks(  # noqa: PLR0913, PLR0917
                 scrape_and_check(check_session, link),
                 raindrop,
                 note_metadata,
-                archival_tasks,
                 create_archival_tasks_partial,
             ),
             name=f"Scrape-And-Check-{link}",
         )
+    else:
+        create_archival_tasks_partial(task_group)
 
     if not user_options.no_checks:
         canonical_url_raindrop: RaindropOut = {
