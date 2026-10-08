@@ -92,6 +92,25 @@ async def test_redirect_disallowed(client_session: Session) -> None:
 
 
 @pytest.mark.asyncio(loop_scope="module")
+async def test_redirect_url_is_final(client_session: Session) -> None:
+    response = await client_session.get(
+        "https://httpbin.org/redirect/2",
+        allow_redirects=False,
+    )
+
+    actual = dict(  # noqa: C408
+        redirect_url=response.redirect_url,
+        url=response.url,
+    )
+    expected = dict(  # noqa: C408
+        redirect_url="https://httpbin.org/get",
+        url="https://httpbin.org/redirect/2",
+    )
+
+    assert actual == expected
+
+
+@pytest.mark.asyncio(loop_scope="module")
 async def test_request_error(client_session: Session) -> None:
     url = "https://invalid/"
 
