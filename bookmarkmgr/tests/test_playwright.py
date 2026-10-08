@@ -29,12 +29,23 @@ async def client_session() -> AsyncIterator[Session]:
         "requires setting HttpsOnlyMode=force_* Chrome policy prior to M154"
     ),
 )
-async def test_https_is_always_used(client_session: Session) -> None:
+async def test_http_is_blocked(client_session: Session) -> None:
     url = "http://portquiz.net/"
 
     with pytest.raises(
         RequestError,
         match=r"net::ERR_BLOCKED_BY_CLIENT: GET " + re.escape(url),
+    ):
+        await client_session.get(url)
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_https_is_not_blocked(client_session: Session) -> None:
+    url = "https://portquiz.net/"
+
+    with pytest.raises(
+        RequestError,
+        match=r"net::ERR_SSL_PROTOCOL_ERROR: GET " + re.escape(url),
     ):
         await client_session.get(url)
 
