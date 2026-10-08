@@ -149,7 +149,7 @@ class Session:
                 await route.continue_()
                 return
 
-            await route.abort(error_code="aborted")
+            await route.abort(error_code="blockedbyclient")
 
         async with await self._context.new_page() as page:
             await page.route("**/*", handle_route)

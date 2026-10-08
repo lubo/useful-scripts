@@ -122,7 +122,7 @@ async def test_request_error(client_session: Session) -> None:
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_url_with_fragment_is_not_aborted(
+async def test_url_with_fragment_is_not_blocked(
     client_session: Session,
 ) -> None:
     await client_session.get("https://httpbin.org/status/200#fragment")
