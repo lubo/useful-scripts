@@ -145,7 +145,7 @@ class Session:
         async def handle_route(route: Route) -> None:
             # Browser may rewrite URLs like https://example.com to
             # https://example.com/, etc.
-            if URL(route.request.url) == url:
+            if URL(route.request.url) == url.with_fragment(None):
                 await route.continue_()
                 return
 

@@ -100,3 +100,10 @@ async def test_request_error(client_session: Session) -> None:
         match=r"net::ERR_NAME_NOT_RESOLVED: GET " + re.escape(url),
     ):
         await client_session.get(url)
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_url_with_fragment_is_not_aborted(
+    client_session: Session,
+) -> None:
+    await client_session.get("https://httpbin.org/status/200#fragment")
