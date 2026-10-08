@@ -184,25 +184,25 @@ class Session:
 
             redirect_url = None
 
-            if not allow_redirects:
-                # There doesn't seem to be a way to actually prevent the
-                # browser from following redirects. Route handler is only fired
-                # for the initial URL.
-                while (
-                    (
-                        redirected_from
-                        := internal_response.request.redirected_from
-                    )
-                    is not None
-                    and (redirect_response := await redirected_from.response())
-                    is not None
-                    # Redirect is not internal.
-                    and await redirect_response.server_addr()
-                ):
-                    if redirect_url is None:
-                        redirect_url = internal_response.url
+            # There doesn't seem to be a way to actually prevent the browser
+            # from following redirects. Route handler is only fired for the
+            # initial URL.
+            while (
+                not allow_redirects
+                and (
+                    redirected_from
+                    := internal_response.request.redirected_from
+                )
+                is not None
+                and (redirect_response := await redirected_from.response())
+                is not None
+                # Redirect is not internal.
+                and await redirect_response.server_addr()
+            ):
+                if redirect_url is None:
+                    redirect_url = internal_response.url
 
-                    internal_response = redirect_response
+                internal_response = redirect_response
 
             if not (status_text := internal_response.status_text):
                 with contextlib.suppress(ValueError):
