@@ -129,6 +129,74 @@ class Session:
 
         async with await self._context.new_page() as page:
             cdp_session = await page.context.new_cdp_session(page)
+            await cdp_session.send(
+                "Fetch.enable",
+                {
+                    "patterns": [
+                        {
+                            "requestStage": "Request",
+                            "urlPattern": "*",
+                        },
+                    ],
+                },
+            )
+
+            async def on_request_paused(event) -> None:
+                # headers = event["request"]["headers"]
+
+                # for name, value in headers:
+                #     if name == "sec-fetch-mode":
+                #         headers[name] = "navigate"
+
+                raise RuntimeError
+
+                headers = [
+                    {"name": name, "value": value}
+                    for name, value in {
+                        "cache-control": "max-age=0",
+                        "sec-ch-ua": '"Google Chrome";v="155", "Chromium";v="155", "Not(A:Brand";v="24"',
+                        "sec-ch-ua-mobile": "?0",
+                        "sec-ch-ua-platform": '"Linux"',
+                        "dnt": "1",
+                        "upgrade-insecure-requests": "1",
+                        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+                        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                        "sec-fetch-site": "none",
+                        "sec-fetch-mode": "navigate",
+                        "sec-fetch-user": "?1",
+                        "sec-fetch-dest": "document",
+                        "accept-encoding": "gzip, deflate, br, zstd",
+                        "accept-language": "en-SK,en;q=0.9,sk-SK;q=0.8,sk;q=0.7",
+                        "priority": "u=0, i",
+                    }.items()
+                ]
+
+                await cdp_session.send(
+                    "Fetch.continueRequest",
+                    {
+                        "requestId": event["requestId"],
+                        "headers": headers,
+                    },
+                )
+
+            cdp_session.on(
+                "Fetch.requestPaused",
+                on_request_paused,
+            )
+            await cdp_session.send(
+                "Network.enable",
+                {},
+            )
+            await cdp_session.send(
+                "Network.setExtraHTTPHeaders",
+                {
+                    "headers": {
+                        "Accept": "application/json",
+                        "X-Custom-Header": "example",
+                        "User-Agent": "MyCustomAgent/1.0",
+                    }
+                },
+            )
 
             frame_tree = await cdp_session.send("Page.getFrameTree")
             # {{BrowserContext,Page}.request,Route}.fetch() don't use the
