@@ -1,18 +1,10 @@
 import asyncio
+import base64
 import contextlib
 from http import HTTPStatus
 import re
 from typing import override, Self, TYPE_CHECKING, TypedDict, Unpack
 
-from playwright.async_api import (
-    Error as PlaywrightError,
-)
-from playwright.async_api import (
-    # Playwright crashes without Route type present with:
-    #
-    #   NameError: Page.__aexit__: name 'Route' is not defined
-    Route,
-)
 from yarl import URL
 
 from bookmarkmgr.asyncio import RateLimiter
@@ -33,11 +25,6 @@ if TYPE_CHECKING:
     )
 
     from .types import StrOrURL
-
-_PAGE_GOTO_ERROR_PATTERN = re.compile(
-    r"^Page.goto: (\S+) at (\S+)$",
-    re.MULTILINE,
-)
 
 _USER_AGENT_PATTERN = re.compile(
     (
@@ -74,9 +61,6 @@ RETRYABLE_STATUS_CODES = {
     *RATE_LIMIT_STATUS_CODES,
     *TRANSIENT_ERROR_STATUS_CODES,
 }
-
-# 2x Chrome maximum, lets the browser time out first.
-TIMEOUT = 10 * 60 * 1000
 
 
 class _SessionRequestOptions(TypedDict, total=False):
@@ -125,7 +109,7 @@ class Session:
         await self._context.close()
         self._context = None
 
-    async def get(  # noqa: C901
+    async def get(
         self,
         url: StrOrURL,
         **kwargs: Unpack[_SessionRequestOptions],
@@ -133,7 +117,8 @@ class Session:
         if self._context is None:
             raise NotContextManagerError
 
-        allow_redirects = kwargs.get("allow_redirects", True)
+        # TODO: Handle redirects.
+        # allow_redirects = kwargs.get("allow_redirects", True)
         params = kwargs.get("params")
 
         if isinstance(url, str):
@@ -142,79 +127,64 @@ class Session:
         if params is not None:
             url = url.update_query(params)
 
-        async def handle_route(route: Route) -> None:
-            # Browser may rewrite URLs like https://example.com to
-            # https://example.com/, etc.
-            if URL(route.request.url) == url.with_fragment(None):
-                await route.continue_()
-                return
-
-            await route.abort(error_code="blockedbyclient")
-
         async with await self._context.new_page() as page:
-            await page.route("**/*", handle_route)
+            cdp_session = await page.context.new_cdp_session(page)
 
+            frame_tree = await cdp_session.send("Page.getFrameTree")
             # {{BrowserContext,Page}.request,Route}.fetch() don't use the
             # browser to perform the request.
-            try:
-                internal_response = await page.goto(
-                    str(url),
-                    timeout=TIMEOUT,
-                    wait_until="commit",
-                )
-            except PlaywrightError as error:
-                if (
-                    match := _PAGE_GOTO_ERROR_PATTERN.match(error.message)
-                ) is None:
-                    message = (
-                        "Unrecognized error message: "
-                        + error.message.splitlines()[0]
-                    )
-                    raise ValueError(message) from None
-                error_code, error_url = match.group(1, 2)
-                message = f"{error_code}: GET {error_url}"
-                raise RequestError(message) from error
+            # Page.goto() renders the page.
+            result = await cdp_session.send(
+                "Network.loadNetworkResource",
+                {
+                    "frameId": frame_tree["frameTree"]["frame"]["id"],
+                    "options": {
+                        "disableCache": False,
+                        "includeCredentials": True,
+                    },
+                    "url": str(url),
+                },
+            )
+            resource = result["resource"]
 
-            if internal_response is None:
-                msg = f"Invalid URL: {url}"
-                raise ValueError(msg)
+            if not resource["success"]:
+                message = f"{resource['netErrorName']}: GET {url}"
+                raise RequestError(message)
 
             redirect_url = None
+            status = resource["httpStatusCode"]
+            status_text = ""
 
-            # There doesn't seem to be a way to actually prevent the browser
-            # from following redirects. Route handler is only fired for the
-            # initial URL.
-            while (
-                not allow_redirects
-                and (
-                    redirected_from
-                    := internal_response.request.redirected_from
-                )
-                is not None
-                and (redirect_response := await redirected_from.response())
-                is not None
-                # Redirect is not internal.
-                and await redirect_response.server_addr()
-            ):
-                if redirect_url is None:
-                    redirect_url = internal_response.url
-
-                internal_response = redirect_response
-
-            if not (status_text := internal_response.status_text):
-                with contextlib.suppress(ValueError):
-                    status_text = HTTPStatus(internal_response.status).phrase
+            with contextlib.suppress(ValueError):
+                status_text = HTTPStatus(status).phrase
 
             response = Response(
-                internal_response.status,
-                internal_response.url,
+                status,
+                str(url),
                 status_text,
                 redirect_url=redirect_url,
             )
-            if redirect_url is None:
-                response.content = await internal_response.body()
-            for header in await internal_response.headers_array():
-                response.headers[header["name"]] = header["value"]
+            while redirect_url is None:
+                result = await cdp_session.send(
+                    "IO.read",
+                    {
+                        "handle": resource["stream"],
+                        "offset": len(response.content),
+                    },
+                )
+
+                response.content += (
+                    base64.b64decode(result["data"])
+                    if result.get("base64Encoded", False)
+                    else result["data"].encode()
+                )
+
+                if result["eof"]:
+                    break
+            for name, value in resource["headers"].items():
+                response.headers[name] = value
+
+            await cdp_session.detach()
 
         return response
 
