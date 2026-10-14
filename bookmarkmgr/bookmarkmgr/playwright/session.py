@@ -154,11 +154,8 @@ class Session:
         async with await self._context.new_page() as page:
             await page.route("**/*", handle_route)
 
-            # Using BrowserContext.request.fetch()/Page.request.fetch()/
-            # Route.fetch() would be more efficient, but it doesn't behave the
-            # same way as normal navigation requests do and it cannot be forced
-            # to behave like that. Names, order and values of headers cannot be
-            # entirely controlled, HTTP/2/3 doesn't work, etc.
+            # {{BrowserContext,Page}.request,Route}.fetch() don't use the
+            # browser to perform the request.
             try:
                 internal_response = await page.goto(
                     str(url),
