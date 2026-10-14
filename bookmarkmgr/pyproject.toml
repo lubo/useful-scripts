@@ -52,9 +52,6 @@ ignore = [
     "S607",
     "TRY400",
 ]
-external = [
-    "PLR0917", # Ruff >=0.16
-]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "**/tests/**/*.py" = [
