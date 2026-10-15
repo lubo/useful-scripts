@@ -52,11 +52,6 @@ if TYPE_CHECKING:
 
 logger = get_logger()
 
-BROKEN_LINK_STATUSES = {
-    LinkStatus.BROKEN,
-    LinkStatus.POSSIBLY_BROKEN,
-}
-
 LINK_STATUS_TAGS = {
     LinkStatus.BROKEN: "broken",
     LinkStatus.POSSIBLY_BROKEN: "possibly-broken",
@@ -336,21 +331,22 @@ async def process_scrape_and_check_result(  # noqa: C901, PLR0912
         ):
             raindrop["title"] = page.title
 
-    if link_status in BROKEN_LINK_STATUSES:
-        try:
-            broken_since = datetime.fromisoformat(
-                metadata.get("Broken since", ""),
-            ).replace(tzinfo=UTC)
-        except ValueError:
-            broken_since = now
-            metadata["Broken since"] = str(broken_since)
+    match link_status:
+        case LinkStatus.BROKEN | LinkStatus.POSSIBLY_BROKEN:
+            try:
+                broken_since = datetime.fromisoformat(
+                    metadata.get("Broken since", ""),
+                ).replace(tzinfo=UTC)
+            except ValueError:
+                broken_since = now
+                metadata["Broken since"] = str(broken_since)
 
-        if link_status == LinkStatus.POSSIBLY_BROKEN and (
-            now >= broken_since + timedelta(days=7)
-        ):
-            link_status = LinkStatus.BROKEN
-    else:
-        metadata.pop("Broken since", None)
+            if link_status == LinkStatus.POSSIBLY_BROKEN and (
+                now >= broken_since + timedelta(days=7)
+            ):
+                link_status = LinkStatus.BROKEN
+        case LinkStatus.BLOCKED | LinkStatus.OK:
+            metadata.pop("Broken since", None)
 
     for status, tag in LINK_STATUS_TAGS.items():
         add_or_remove_tag(
