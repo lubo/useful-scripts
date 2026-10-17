@@ -2,6 +2,7 @@
 # removed.
 
 import argparse
+import contextlib
 from html.parser import HTMLParser
 from pathlib import Path
 import sys
@@ -83,15 +84,16 @@ def main():
     with args.file:
         items = parse_bookmarks(args.file.read())
 
-    print(  # noqa: T201
-        yaml.dump(
-            items,
-            allow_unicode=True,
-            default_flow_style=False,
-            Dumper=YamlSafeDumper,
-            width=2147483647,  # -1 doesn't always work
-        ),
-    )
+    with contextlib.suppress(BrokenPipeError):
+        print(  # noqa: T201
+            yaml.dump(
+                items,
+                allow_unicode=True,
+                default_flow_style=False,
+                Dumper=YamlSafeDumper,
+                width=2147483647,  # -1 doesn't always work
+            ),
+        )
 
 
 if __name__ == "__main__":
