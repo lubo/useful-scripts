@@ -43,8 +43,9 @@ type Result = RequestError | ScrapedData
 
 
 class _HtmlParser(HTMLParser):
-    __page: Page
-    __path: list[str]
+    # Initialized in reset().
+    __page: Page  # type: ignore[uninitialized-instance-variable]
+    __path: list[str]  # type: ignore[uninitialized-instance-variable]
 
     def handle_selfclosingtag(  # noqa: PLR0912
         self,

@@ -17,7 +17,8 @@ logger = get_logger()
 class ForgivingTaskGroup(TaskGroup):
     """TaskGroup that doesn't fail fast on task failure."""
 
-    _parent_cancel_requested: bool
+    # Initialized in the TaskGroup constructor.
+    _parent_cancel_requested: bool  # type: ignore[uninitialized-instance-variable]
 
     @runtime_override
     def _is_base_error(self, exc: BaseException) -> bool:

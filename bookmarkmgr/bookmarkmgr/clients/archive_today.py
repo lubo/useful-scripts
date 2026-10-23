@@ -24,7 +24,8 @@ class ArchiveTodayError(Exception):
 
 
 class _HtmlParser(HTMLParser):
-    __text: str
+    # Initialized in reset().
+    __text: str  # type: ignore[uninitialized-instance-variable]
 
     @override
     def handle_data(self, data: str) -> None:
