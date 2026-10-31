@@ -254,7 +254,7 @@ class RetrySession(Session):
         return await super().get(url, **kwargs)
 
     @override
-    async def get(  # noqa: C901
+    async def get(  # noqa: C901, PLR0912
         self,
         url: StrOrURL,
         *,
@@ -296,6 +296,8 @@ class RetrySession(Session):
                 ):
                     if error is not None:
                         logger.debug(error)
+                    elif attempt > INIT_MAX_RETRY_ATTEMPTS * 2:
+                        logger.info("Failures resolved")
 
                     return response
             except RequestError as err:
@@ -309,17 +311,18 @@ class RetrySession(Session):
             is_retry = True
 
             if error is not None:
-                log_function = (
-                    logger.warning
-                    if attempt % (INIT_MAX_RETRY_ATTEMPTS * 2) == 0
-                    else logger.debug
-                )
-                log_function(
-                    "Attempt %d/%d failed: %s",
-                    attempt,
-                    max_attempts,
-                    error,
-                )
+                if attempt == INIT_MAX_RETRY_ATTEMPTS * 2:
+                    logger.warning(
+                        "Attempts keep failing: %s",
+                        error,
+                    )
+                else:
+                    logger.debug(
+                        "Attempt %d/%d failed: %s",
+                        attempt,
+                        max_attempts,
+                        error,
+                    )
 
             if not retry and (
                 response is None
