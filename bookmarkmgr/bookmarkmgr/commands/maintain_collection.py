@@ -182,6 +182,16 @@ def create_archival_tasks(  # noqa: PLR0913, PLR0917
     )
     link = raindrop["link"]
 
+    if (
+        "Archival Error (AT)" not in note_metadata
+        and "Archival Error (WM)" not in note_metadata
+    ):
+        add_or_remove_tag(
+            raindrop,
+            False,  # noqa: FBT003
+            "archival-failed",
+        )
+
     if not (
         user_options.no_archive
         or (user_options.no_archive_broken and is_link_broken)
