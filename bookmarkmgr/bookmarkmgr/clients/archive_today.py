@@ -7,7 +7,7 @@ from typing import NotRequired, override, TYPE_CHECKING, TypedDict
 from bookmarkmgr.asyncio import RateLimiter
 from bookmarkmgr.logging import get_logger
 from bookmarkmgr.playwright import RateLimitedSession, RequestError
-from bookmarkmgr.types import Failure, Result, Success
+from bookmarkmgr.types import Result, Success
 
 from . import ClientSessionContextManagerMixin
 
@@ -88,7 +88,11 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
                         refresh_header = response.headers.get("Refresh")
 
                         if refresh_header is None:
-                            return Failure(_extract_text(response.text))
+                            message = (
+                                f"Unexpected response for {response.url}: "
+                                + _extract_text(response.text)
+                            )
+                            raise ArchiveTodayError(message)
 
                         refresh_parts = refresh_header.split("=", 1)
 
