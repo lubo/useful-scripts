@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import cast, Literal, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -13,7 +13,16 @@ _VISIBLE_METADATA = {
     "Archive (WM)",
 }
 
-Metadata = dict[str, str]
+MetadataKey = Literal[
+    "Archive (AT)",
+    "Archive (WM)",
+    "Archival Error (AT)",
+    "Archival Error (WM)",
+    "Broken since",
+    "Canonical URL",
+    "Last check",
+]
+Metadata = dict[MetadataKey, str]
 
 
 def _pairs_to_lines(pairs: Iterable[tuple[str, str]]) -> list[str]:
@@ -54,6 +63,6 @@ def metadata_from_note(note: str) -> Metadata:
         if len(segments) == 1:
             segments.append("")
 
-        metadata[segments[0]] = segments[1].strip()
+        metadata[cast("MetadataKey", segments[0])] = segments[1].strip()
 
     return metadata

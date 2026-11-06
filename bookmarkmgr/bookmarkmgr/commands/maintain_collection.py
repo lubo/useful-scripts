@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from functools import partial
 import re
-from typing import NoReturn, TYPE_CHECKING
+from typing import Literal, NoReturn, TYPE_CHECKING
 
 from playwright.async_api import async_playwright
 from tqdm import tqdm
@@ -126,7 +126,7 @@ async def process_archival_result(
     result_awaitable: Awaitable[Result[str, str]],
     raindrop: RaindropIn,
     metadata: Metadata,
-    service_initials: str,
+    service_initials: Literal["AT", "WM"],
     service_name: str,
 ) -> None:
     try:
@@ -136,9 +136,10 @@ async def process_archival_result(
 
     match result:
         case Success(archival_url):
-            metadata[f"Archive ({service_initials})"] = (
-                f"[link]({archival_url})"
-            )
+            metadata[
+                # type: ignore[unsupported-operation]
+                f"Archive ({service_initials})"
+            ] = f"[link]({archival_url})"
             tag = "archived"
         case _:
             match result:
@@ -157,7 +158,10 @@ async def process_archival_result(
             if isinstance(error, Exception):
                 return
 
-            metadata[f"Archival Error ({service_initials})"] = error
+            metadata[
+                # type: ignore[unsupported-operation]
+                f"Archival Error ({service_initials})"
+            ] = error
             tag = "archival-failed"
 
     if tag in raindrop["tags"]:
