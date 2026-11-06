@@ -1,6 +1,6 @@
 import asyncio
 import math
-from typing import cast, TYPE_CHECKING, TypedDict
+from typing import cast, Literal, TYPE_CHECKING, TypedDict
 
 from bookmarkmgr.aiohttp import RateLimitedRetryClientSession
 from bookmarkmgr.asyncio import RateLimiter
@@ -12,6 +12,15 @@ if TYPE_CHECKING:
 
 RAINDROPS_PER_PAGE = 50
 
+RaindropTag = Literal[
+    "archival-failed",
+    "archived",
+    "blocked",
+    "broken",
+    "duplicate",
+    "possibly-broken",
+]
+
 
 class BaseRaindrop(TypedDict):
     cover: str
@@ -19,7 +28,7 @@ class BaseRaindrop(TypedDict):
     excerpt: str
     link: str
     note: str
-    tags: list[str]
+    tags: list[RaindropTag]
     title: str
 
 

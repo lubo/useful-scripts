@@ -29,6 +29,7 @@ from bookmarkmgr.clients.raindrop import (
     RaindropClient,
     RaindropIn,
     RaindropOut,
+    RaindropTag,
 )
 from bookmarkmgr.clients.wayback_machine import (
     WaybackMachineClient,
@@ -52,7 +53,7 @@ if TYPE_CHECKING:
 
 logger = get_logger()
 
-LINK_STATUS_TAGS = {
+LINK_STATUS_TAGS: dict[LinkStatus, RaindropTag] = {
     LinkStatus.BROKEN: "broken",
     LinkStatus.POSSIBLY_BROKEN: "possibly-broken",
     LinkStatus.BLOCKED: "blocked",
@@ -234,7 +235,7 @@ def create_archival_tasks(  # noqa: PLR0913, PLR0917
 def add_or_remove_tag(
     raindrop: RaindropIn,
     add_tag: bool,  # noqa: FBT001
-    tag: str,
+    tag: RaindropTag,
     error: str | None = None,
 ) -> None:
     tag_added = tag in raindrop["tags"]
