@@ -29,6 +29,9 @@ class _HtmlParser(HTMLParser):
 
     @override
     def handle_data(self, data: str) -> None:
+        if self.cdata_elem is not None:
+            return
+
         self.__text = " ".join(filter(None, [self.__text, data.strip()]))
 
     @override
