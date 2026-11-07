@@ -545,8 +545,11 @@ async def maintain_collection(
         ) -> None:
             maintaining_progress_bar.update(1)
 
+        total = 0
+
         async for item in items:
             loading_progress_bar.update(1)
+            total += 1
 
             task = task_group.create_task(
                 maintain_raindrop(
@@ -564,8 +567,8 @@ async def maintain_collection(
 
             await asyncio.sleep(0)
 
-        maintaining_progress_bar.total = loading_progress_bar.n
+        maintaining_progress_bar.total = total
 
         duplicate_checker.set_required_link_count(
-            maintaining_progress_bar.total,
+            total,
         )
