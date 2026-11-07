@@ -62,7 +62,7 @@ class ArchiveTodayClient(ClientSessionContextManagerMixin[RateLimitedSession]):
         self._session = RateLimitedSession(
             browser,
             rate_limiter=RateLimiter(
-                limit=6,
+                limit=1,
             ),
         )
 
