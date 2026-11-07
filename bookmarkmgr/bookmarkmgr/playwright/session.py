@@ -265,7 +265,7 @@ class RetrySession(Session):
         factor = 1
         is_retry = False
         max_attempts = INIT_MAX_RETRY_ATTEMPTS
-        start_delay = 2.5
+        start_delay = 5
 
         while True:
             response = None
@@ -329,7 +329,7 @@ class RetrySession(Session):
                 or response.status_code not in RATE_LIMIT_STATUS_CODES
             ):
                 delay = start_delay * factor
-                factor *= 2
+                factor *= 3
             else:
                 delay = self.__rate_limit_timeout
                 max_attempts += 1
