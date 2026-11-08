@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -eo pipefail
+
+if (($# != 1)); then
+	echo "Usage: $(basename "$0") <commit>" >&2
+	exit 1
+fi
+
+commit=$1
+
+git cherry-pick "${commit}"
+
+message=$(
+	git show \
+		--format=%B \
+		--no-patch |
+		sed \
+			-e '1s/bump/Upgrade/I' \
+			-e '1s/the all-packages group .*/dependencies/' \
+			-e '1s/from [^ ]* to \([^ ]*\)/to version \1/' \
+			-e '1s/ in .*//'
+)
+author=$(
+	git show \
+		--format='%an <%ae>' \
+		--no-patch
+)
+
+# Set myself as the author so that my signature is valid.
+git commit \
+	--amend \
+	--edit \
+	--message "${message}" \
+	--reset-author \
+	--trailer "Co-authored-by: ${author}"
