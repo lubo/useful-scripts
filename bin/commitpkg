@@ -14,11 +14,7 @@ git() {
 		echo canonical
 		;;
 	"config --local devtools.version")
-		(
-			# shellcheck disable=SC1091
-			source /usr/share/devtools/lib/common.sh
-			echo "${GIT_REPO_SPEC_VERSION}"
-		)
+		echo "${GIT_REPO_SPEC_VERSION}"
 		;;
 	"symbolic-ref --short HEAD")
 		echo main
