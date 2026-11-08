@@ -31,7 +31,7 @@ git() {
 
 gpg() {
 	case "$1" in
-	--verify)
+	--detach-sign | --verify)
 		;;
 	*)
 		env gpg "$@"
@@ -40,15 +40,6 @@ gpg() {
 }
 
 main() {
-	(
-		# shellcheck disable=SC1091
-		source /usr/share/makepkg/util/config.sh
-		source_makepkg_config
-
-		local pkg_files=(*"${PKGEXT:?}")
-		touch -- "${pkg_files[@]/%/.sig}"
-	)
-
 	export -f archrelease git gpg
 
 	exec /usr/bin/commitpkg extra "$@"
