@@ -1,6 +1,11 @@
 #!/bin/bash
 #
-# Wrapper for commitpkg from Arch Linux devtools that works with AUR packages.
+# Wrapper for commitpkg from Arch Linux devtools that removes:
+# - `pkgctl repo configure` requirement
+# - Requirement for running from `main` Git branch
+# - Package signing, releasing and uploading
+#
+# This is useful for AUR packages.
 
 set -eo pipefail
 
