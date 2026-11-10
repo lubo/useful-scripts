@@ -28,6 +28,9 @@ class BrowserManager:
 
         self._browser = await self._playwright.chromium.launch(
             executable_path=executable_path,
+            args=[
+                "--disable-gl-drawing-for-tests",  # Disables visual rendering.
+            ],
             # Browser closing is handled by this context manager. Without this,
             # the browser would be closed prematurely, leading to error:
             #
