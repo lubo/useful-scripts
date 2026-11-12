@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Wraps a program in ssh-agent and adds keys into the agent. If no program is
-# provided, then it spawns an interactive shell.
+# Wraps a program in ssh-agent isolated from the host and adds keys into the
+# agent. If no program is provided, then it spawns an interactive shell.
 
 set -eo pipefail
 
