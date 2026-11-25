@@ -5,9 +5,9 @@ description = ""
 authors = []
 requires-python = ">=3.12"
 dependencies = [
-    "playwright>=1.65.1",
+    "playwright>=1.65.2",
     "yt-dlp>=2026.10.26",
-    "ytmusicapi>=1.12.3",
+    "ytmusicapi>=1.12.4",
 ]
 
 [project.scripts]
